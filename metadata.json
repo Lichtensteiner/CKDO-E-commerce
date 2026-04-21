@@ -1,0 +1,12 @@
+{
+  "name": "CKDO E-commerce",
+  "description": "Plateforme e-commerce moderne pour CKDO (CECA-GADIS) au Gabon. Click & Collect, paiement Mobile Money et gestion complète.",
+  "requestFramePermissions": [
+    "geolocation"
+  ],
+  "majorCapabilities": [
+    "e-commerce",
+    "mobile-money",
+    "click-and-collect"
+  ]
+}

@@ -1,0 +1,124 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // 0. Global Safety Net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // --- Helpers ---
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isAdmin() {
+      // Check for admin role in users collection
+      return isSignedIn() && 
+             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+
+    function isLogistics() {
+      return isSignedIn() && 
+             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'logistics';
+    }
+
+    // --- Diagnostic ---
+    match /test/connection {
+      allow read: if true;
+    }
+
+    // --- User Profiles ---
+    match /users/{userId} {
+      function isValidUser(data) {
+        return data.uid == request.auth.uid &&
+               data.email is string &&
+               data.email.size() < 256 &&
+               data.role in ['customer', 'admin', 'logistics'] &&
+               data.createdAt == request.time;
+      }
+
+      allow get: if isOwner(userId) || isAdmin();
+      allow list: if isAdmin();
+      allow create: if isOwner(userId) && 
+                      isValidUser(incoming()) && 
+                      incoming().role == 'customer' &&
+                      isValidId(userId);
+      allow update: if isOwner(userId) && 
+                      incoming().diff(existing()).affectedKeys().hasOnly(['displayName', 'phoneNumber', 'updatedAt']) &&
+                      (incoming().updatedAt == request.time || !incoming().keys().hasAny(['updatedAt']));
+    }
+
+    // --- Stores ---
+    match /stores/{storeId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // --- Categories ---
+    match /categories/{categoryId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // --- Products ---
+    match /products/{productId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // --- Orders ---
+    match /orders/{orderId} {
+      function isValidOrder(data) {
+        return data.customerId == request.auth.uid &&
+               data.items is list &&
+               data.items.size() > 0 &&
+               data.items.size() <= 50 &&
+               data.totalAmount is number &&
+               data.totalAmount >= 0 &&
+               data.status in ['pending', 'paid', 'preparing', 'ready', 'delivered'] &&
+               data.paymentMethod in ['mobile_money', 'card', 'in_store'] &&
+               data.paymentStatus in ['pending', 'completed', 'failed'] &&
+               isValidId(data.storeId);
+      }
+
+      allow get: if isSignedIn() && (resource.data.customerId == request.auth.uid || isAdmin() || isLogistics());
+      allow list: if isSignedIn() && (resource.data.customerId == request.auth.uid || isAdmin() || isLogistics());
+      
+      allow create: if isSignedIn() && 
+                      isValidId(orderId) &&
+                      isValidOrder(incoming()) && 
+                      incoming().status == 'pending' && 
+                      incoming().createdAt == request.time;
+      
+      allow update: if isSignedIn() && (
+        // Action: Customer updates payment status or cancels before processing
+        (resource.data.customerId == request.auth.uid && 
+         existing().status == 'pending' &&
+         incoming().diff(existing()).affectedKeys().hasOnly(['paymentStatus', 'paymentTransactionId', 'status', 'updatedAt']) &&
+         incoming().updatedAt == request.time) ||
+        
+        // Action: Staff updates status
+        ((isAdmin() || isLogistics()) && 
+         incoming().diff(existing()).affectedKeys().hasOnly(['status', 'updatedAt']) &&
+         incoming().updatedAt == request.time)
+      );
+    }
+  }
+}
+

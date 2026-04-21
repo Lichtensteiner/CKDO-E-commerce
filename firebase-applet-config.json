@@ -1,0 +1,9 @@
+{
+  "projectId": "ckdo-e-commerce",
+  "appId": "1:567806027710:web:0221e8e5fc576dedc33bef",
+  "apiKey": "AIzaSyAW06I2stcy0FeZRA3aFTxUSblMKSZT3mI",
+  "authDomain": "ckdo-e-commerce.firebaseapp.com",
+  "firestoreDatabaseId": "(default)",
+  "storageBucket": "ckdo-e-commerce.firebasestorage.app",
+  "messagingSenderId": "567806027710"
+}

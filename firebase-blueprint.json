@@ -1,0 +1,102 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "App user profile, including customers, admins, and logistics agents.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "email": { "type": "string" },
+        "displayName": { "type": "string" },
+        "role": { "type": "string", "enum": ["customer", "admin", "logistics"] },
+        "phoneNumber": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "email", "role"]
+    },
+    "Store": {
+      "title": "Store",
+      "description": "Physical store location for click-and-collect.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "city": { "type": "string" },
+        "address": { "type": "string" },
+        "location": { "type": "object" },
+        "isActive": { "type": "boolean" }
+      },
+      "required": ["id", "name", "city"]
+    },
+    "Category": {
+      "title": "Category",
+      "description": "Product category.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "icon": { "type": "string" }
+      },
+      "required": ["id", "name"]
+    },
+    "Product": {
+      "title": "Product",
+      "description": "E-commerce product.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "description": { "type": "string" },
+        "price": { "type": "number" },
+        "category": { "type": "string" },
+        "imageUrl": { "type": "string" },
+        "stock": { "type": "object" },
+        "isActive": { "type": "boolean" },
+        "isPromo": { "type": "boolean" },
+        "promoPrice": { "type": "number" }
+      },
+      "required": ["id", "name", "price", "category"]
+    },
+    "Order": {
+      "title": "Order",
+      "description": "Customer order details.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "customerId": { "type": "string" },
+        "storeId": { "type": "string" },
+        "items": { "type": "array" },
+        "totalAmount": { "type": "number" },
+        "status": { "type": "string", "enum": ["pending", "paid", "preparing", "ready", "delivered"] },
+        "paymentMethod": { "type": "string", "enum": ["mobile_money", "card", "in_store"] },
+        "paymentStatus": { "type": "string", "enum": ["pending", "completed", "failed"] },
+        "pickupSlot": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "customerId", "storeId", "items", "totalAmount", "status"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "User profiles"
+    },
+    "/stores/{storeId}": {
+      "schema": "Store",
+      "description": "Magasins CKDO"
+    },
+    "/categories/{categoryId}": {
+      "schema": "Category",
+      "description": "Catégories de produits"
+    },
+    "/products/{productId}": {
+      "schema": "Product",
+      "description": "Catalogue produits"
+    },
+    "/orders/{orderId}": {
+      "schema": "Order",
+      "description": "Commandes clients"
+    }
+  }
+}
