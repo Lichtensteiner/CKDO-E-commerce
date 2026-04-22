@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { db } from '../lib/firebase';
-import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { orderService } from '../services/orderService';
 import { CheckCircle2, ChevronRight, MapPin, Smartphone, CreditCard, Store as StoreIcon, Loader2 } from 'lucide-react';
 import { formatPrice } from '../lib/utils';
 import { simulateMobileMoneyPayment } from '../lib/payment';
@@ -13,7 +13,7 @@ const STORES = [
   { id: 'ckdo-port-gentil', name: 'CKDO Port-Gentil', city: 'Port-Gentil', address: 'Quartier Administratif' },
 ];
 
-export default function Checkout({ cart, user }: { cart: any[]; user: any }) {
+export default function Checkout({ cart, setCart, user }: { cart: any[]; setCart: (c: any[]) => void; user: any }) {
   const navigate = useNavigate();
   const [step, setStep] = useState(1);
   const [selectedStore, setSelectedStore] = useState(STORES[0]);
@@ -40,13 +40,13 @@ export default function Checkout({ cart, user }: { cart: any[]; user: any }) {
         transactionId = result.transactionId;
       }
 
-      const orderData = {
+      const orderData: any = {
         customerId: user?.uid || 'anonymous',
         storeId: selectedStore.id,
         items: cart.map(item => ({
           productId: item.id,
           name: item.name,
-          price: item.isPromo ? item.promoPrice : item.price,
+          price: item.isPromo ? (item.promoPrice || item.price) : item.price,
           quantity: item.quantity
         })),
         totalAmount: total,
@@ -55,12 +55,11 @@ export default function Checkout({ cart, user }: { cart: any[]; user: any }) {
         paymentStatus: paymentMethod === 'in_store' ? 'pending' : 'completed',
         paymentTransactionId: transactionId,
         pickupSlot: 'Aujourd\'hui, 17h - 18h',
-        createdAt: serverTimestamp(),
-        updatedAt: serverTimestamp(),
       };
 
-      const docRef = await addDoc(collection(db, 'orders'), orderData);
+      const docRef = await orderService.createOrder(orderData);
       setOrderComplete(docRef.id);
+      setCart([]); // Automate: clear the cart after success
     } catch (error) {
       console.error("Order failed:", error);
       alert("Une erreur est survenue lors de la commande.");

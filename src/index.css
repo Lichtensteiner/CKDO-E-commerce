@@ -9,11 +9,21 @@
   --color-brand-red: #DC2626;
   --color-app-background: #F5F7FB;
   --color-app-text: #1A1A1A;
+  --color-card-bg: white;
+  --color-border-subtle: #F1F5F9;
+}
+
+@theme dark {
+  --color-app-background: #0F172A;
+  --color-app-text: #F8FAFC;
+  --color-card-bg: #1E293B;
+  --color-border-subtle: #334155;
+  --color-brand-blue: #60A5FA;
 }
 
 @layer base {
   body {
-    @apply bg-app-background text-app-text antialiased;
+    @apply bg-app-background text-app-text antialiased transition-colors duration-300;
   }
 }
 
@@ -28,6 +38,6 @@
     @apply bg-brand-green text-white px-6 py-3 rounded-lg font-semibold hover:bg-green-700 transition-all active:scale-95 disabled:opacity-50;
   }
   .card-hover {
-    @apply hover:shadow-xl hover:-translate-y-1 transition-all duration-300 bg-white;
+    @apply hover:shadow-xl hover:-translate-y-1 transition-all duration-300 bg-card-bg border border-border-subtle;
   }
 }

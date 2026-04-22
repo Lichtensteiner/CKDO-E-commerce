@@ -43,7 +43,7 @@ export default function Cart({ cart, setCart }: { cart: any[]; setCart: any }) {
             <div key={item.id} className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 flex gap-4">
               <div className="h-24 w-24 rounded-xl overflow-hidden bg-gray-50 shrink-0">
                 <img 
-                  src={`https://picsum.photos/seed/${item.id}/200/200`} 
+                  src={item.imageUrl || `https://picsum.photos/seed/${item.id}/200/200`} 
                   alt={item.name} 
                   className="w-full h-full object-cover"
                   referrerPolicy="no-referrer"

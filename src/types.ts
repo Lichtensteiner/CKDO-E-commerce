@@ -4,10 +4,24 @@ export interface UserProfile {
   uid: string;
   email: string;
   displayName?: string;
+  firstName?: string;
+  lastName?: string;
   photoURL?: string;
   role: UserRole;
   phoneNumber?: string;
   createdAt: string;
+  isBlocked?: boolean;
+  addresses?: Address[];
+  loyaltyPoints?: number;
+  favorites?: string[]; // Array of product IDs
+}
+
+export interface Address {
+  id: string;
+  name: string; // Home, Work, etc.
+  street: string;
+  city: string;
+  isDefault: boolean;
 }
 
 export interface Store {
@@ -31,14 +45,17 @@ export interface Product {
   description: string;
   price: number;
   category: string;
+  subCategory?: string;
   imageUrl: string;
-  stock: Record<string, number>; // storeId -> quantity
+  stock: number;
   isActive: boolean;
   isPromo: boolean;
   promoPrice?: number;
+  createdAt?: any;
+  updatedAt?: any;
 }
 
-export type OrderStatus = 'pending' | 'paid' | 'preparing' | 'ready' | 'delivered';
+export type OrderStatus = 'pending' | 'paid' | 'preparing' | 'ready' | 'delivered' | 'cancelled';
 export type PaymentMethod = 'mobile_money' | 'card' | 'in_store';
 export type PaymentStatus = 'pending' | 'completed' | 'failed';
 

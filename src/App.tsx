@@ -6,11 +6,17 @@ import ProductList from './pages/ProductList';
 import Cart from './pages/Cart';
 import Checkout from './pages/Checkout';
 import Profile from './pages/Profile';
+import ProductDetail from './pages/ProductDetail';
+import Login from './pages/Login';
 import AdminDashboard from './pages/AdminDashboard';
+import LiveOrderTracker from './components/orders/LiveOrderTracker';
 import { auth, db } from './lib/firebase';
 import { onAuthStateChanged } from 'firebase/auth';
-import { doc, getDoc } from 'firebase/firestore';
+import { doc, getDoc, onSnapshot } from 'firebase/firestore';
 import { UserProfile } from './types';
+
+import { ADMIN_EMAILS } from './constants/admins';
+import { storeService } from './services/storeService';
 
 export default function App() {
   const [user, setUser] = useState<UserProfile | null>(null);
@@ -18,30 +24,49 @@ export default function App() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const unsub = onAuthStateChanged(auth, async (firebaseUser) => {
+    storeService.seedStores();
+    let unsubscribeProfile: (() => void) | null = null;
+
+    const unsubAuth = onAuthStateChanged(auth, async (firebaseUser) => {
       if (firebaseUser) {
-        const docRef = doc(db, 'users', firebaseUser.uid);
-        const docSnap = await getDoc(docRef);
-        if (docSnap.exists()) {
-          setUser(docSnap.data() as UserProfile);
-        } else {
-          // If profile doesn't exist, it's a new user
-          const newUser: UserProfile = {
-            uid: firebaseUser.uid,
-            email: firebaseUser.email!,
-            displayName: firebaseUser.displayName || undefined,
-            photoURL: firebaseUser.photoURL || undefined,
-            role: 'customer',
-            createdAt: new Date().toISOString(),
-          };
-          setUser(newUser);
-        }
+        const isAdminEmail = ADMIN_EMAILS.includes(firebaseUser.email || '');
+        const profileRef = doc(db, 'users', firebaseUser.uid);
+        
+        // Use real-time synchronization for profile
+        unsubscribeProfile = onSnapshot(profileRef, (snap) => {
+          if (snap.exists()) {
+            const userData = snap.data() as UserProfile;
+            // Handle role legacy/admin check
+            if ((userData.role as string) === 'user' || (isAdminEmail && userData.role !== 'admin')) {
+              setUser({ ...userData, role: isAdminEmail ? 'admin' : 'customer' });
+            } else {
+              setUser(userData);
+            }
+          } else {
+            // Profile entry doesn't exist yet (new user)
+            const newUser: UserProfile = {
+              uid: firebaseUser.uid,
+              email: firebaseUser.email!,
+              displayName: firebaseUser.displayName || undefined,
+              photoURL: firebaseUser.photoURL || undefined,
+              role: isAdminEmail ? 'admin' : 'customer',
+              createdAt: new Date().toISOString(),
+            };
+            setUser(newUser);
+          }
+          setLoading(false);
+        });
       } else {
         setUser(null);
+        if (unsubscribeProfile) unsubscribeProfile();
+        setLoading(false);
       }
-      setLoading(false);
     });
-    return unsub;
+
+    return () => {
+      unsubAuth();
+      if (unsubscribeProfile) unsubscribeProfile();
+    };
   }, []);
 
   const addToCart = (product: any) => {
@@ -73,11 +98,14 @@ export default function App() {
             <Route path="/" element={<Home onAddToCart={addToCart} />} />
             <Route path="/products" element={<ProductList onAddToCart={addToCart} />} />
             <Route path="/cart" element={<Cart cart={cart} setCart={setCart} />} />
-            <Route path="/checkout" element={<Checkout cart={cart} user={user} />} />
-            <Route path="/profile" element={<Profile user={user} />} />
-            <Route path="/admin/*" element={<AdminDashboard user={user} />} />
+            <Route path="/checkout" element={<Checkout cart={cart} setCart={setCart} user={user} />} />
+            <Route path="/product/:id" element={<ProductDetail onAddToCart={addToCart} user={user} />} />
+            <Route path="/profile" element={<Profile user={user} onAddToCart={addToCart} setCart={setCart} />} />
+            <Route path="/login" element={<Login />} />
+            <Route path="/admin/*" element={user?.role === 'admin' ? <AdminDashboard user={user} /> : <Login />} />
           </Routes>
         </main>
+        <LiveOrderTracker user={user} />
       </div>
     </Router>
   );

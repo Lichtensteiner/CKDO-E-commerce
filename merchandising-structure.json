@@ -1,0 +1,64 @@
+{
+  "rayons": [
+    {
+      "id": "epicerie_salee",
+      "nom": "Épicerie Salée",
+      "icone": "🥫",
+      "sous_categories": [
+        {
+          "nom": "Riz & Céréales",
+          "exemples": ["Riz Long Grain Luxury 5kg", "Riz Thaï Royal", "Semoule fine"]
+        },
+        {
+          "nom": "Huiles & Condiments",
+          "exemples": ["Huile Cuisin'Or 1L", "Tomate Concentrée Petit Paquet", "Cube Maggi"]
+        },
+        {
+          "nom": "Pâtes & Conserves",
+          "exemples": ["Spaghetti Panzani", "Sardines à l'huile", "Corned-Beef"]
+        }
+      ]
+    },
+    {
+      "id": "boissons",
+      "nom": "Boissons",
+      "icone": "🥤",
+      "sous_categories": [
+        {
+          "nom": "Eaux & Sodas",
+          "exemples": ["Pack Eau Akewa", "Top Orange 1.5L", "Djino"]
+        },
+        {
+          "nom": "Jus & Nectars",
+          "exemples": ["Jus d'Ananas", "Nectar de Mangue", "Sirop"]
+        }
+      ]
+    },
+    {
+      "id": "hygiene_beaute",
+      "nom": "Hygiène & Beauté",
+      "icone": "🧼",
+      "sous_categories": [
+        {
+          "nom": "Soin du corps",
+          "exemples": ["Savon Duru Pack", "Déodorant Mixa", "Gel douche"]
+        },
+        {
+          "nom": "Bébé",
+          "exemples": ["Couches Pampers T4", "Lingettes", "Lait Nido 1er âge"]
+        }
+      ]
+    },
+    {
+      "id": "entretien",
+      "nom": "Entretien Maison",
+      "icone": "🧹",
+      "sous_categories": [
+        {
+          "nom": "Lavage",
+          "exemples": ["OMO 1kg", "Eau de Javel Lacroix", "Assouplissant"]
+        }
+      ]
+    }
+  ]
+}

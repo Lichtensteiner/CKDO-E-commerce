@@ -1,97 +1,138 @@
 import React, { useState, useEffect } from 'react';
-import { collection, getDocs, query, where } from 'firebase/firestore';
-import { db } from '../lib/firebase';
 import ProductCard from '../components/product/ProductCard';
+import CategoryNav from '../components/product/CategoryNav';
 import { Filter, Search, ChevronDown } from 'lucide-react';
+import { motion, AnimatePresence } from 'motion/react';
+import { productService } from '../services/productService';
+import { Product } from '../types';
 
-const MOCK_PRODUCTS = [
-  { id: '1', name: 'Riz Long Grain Luxury 5kg', price: 4500, category: 'Épicerie', isPromo: true, promoPrice: 3900, imageUrl: 'https://picsum.photos/seed/rice/400/400' },
-  { id: '2', name: 'Huile de Palme Raffinée 1L', price: 1200, category: 'Épicerie', imageUrl: 'https://picsum.photos/seed/oil/400/400' },
-  { id: '3', name: 'Pack Eau Akewa 6x1.5L', price: 2500, category: 'Boissons', imageUrl: 'https://picsum.photos/seed/water/400/400' },
-  { id: '4', name: 'Lait en Poudre Nido 400g', price: 3200, category: 'Frais', imageUrl: 'https://picsum.photos/seed/milk/400/400' },
-  { id: '5', name: 'Sucre de Canne Grains 1kg', price: 900, category: 'Épicerie', imageUrl: 'https://picsum.photos/seed/sugar/400/400' },
-  { id: '6', name: 'Spaghetti Panzani 500g', price: 650, category: 'Épicerie', isPromo: true, promoPrice: 550, imageUrl: 'https://picsum.photos/seed/pasta/400/400' },
-  { id: '7', name: 'Savon en Poudre OMO 1kg', price: 1500, category: 'Hygiène', imageUrl: 'https://picsum.photos/seed/soap/400/400' },
-  { id: '8', name: 'Viande de Bœuf (Filet) 1kg', price: 6500, category: 'Boucherie', imageUrl: 'https://picsum.photos/seed/meat/400/400' },
-  { id: '9', name: 'Jus de Fruit Pressé D\'Ananas 1L', price: 1800, category: 'Boissons', imageUrl: 'https://picsum.photos/seed/juice/400/400' },
-  { id: '10', name: 'Yaourt Nature Pack de 4', price: 2200, category: 'Frais', imageUrl: 'https://picsum.photos/seed/yogurt/400/400' },
-];
-
-export default function ProductList({ onAddToCart }: { onAddToCart: (p: any) => void }) {
-  const [products, setProducts] = useState(MOCK_PRODUCTS);
-  const [selectedCategory, setSelectedCategory] = useState('Tous');
+export default function ProductList({ onAddToCart }: { onAddToCart: (p: Product) => void }) {
+  const [products, setProducts] = useState<Product[]>([]);
+  const [loadingProducts, setLoadingProducts] = useState(true);
+  const [selectedRayon, setSelectedRayon] = useState('Tous');
+  const [selectedSubCat, setSelectedSubCat] = useState('Tous');
   const [searchQuery, setSearchQuery] = useState('');
+  const [sortBy, setSortBy] = useState<'price-asc' | 'price-desc' | 'newest'>('newest');
+
+  useEffect(() => {
+    const unsub = productService.subscribeToActiveProducts((fetched) => {
+      setProducts(fetched.filter(p => p.isActive));
+      setLoadingProducts(false);
+    });
+    return () => unsub();
+  }, []);
 
   const filteredProducts = products.filter((p) => {
-    const matchesCategory = selectedCategory === 'Tous' || p.category === selectedCategory;
-    const matchesSearch = p.name.toLowerCase().includes(searchQuery.toLowerCase());
-    return matchesCategory && matchesSearch;
+    const matchesRayon = selectedRayon === 'Tous' || p.category === selectedRayon;
+    
+    const matchesSubCat = selectedSubCat === 'Tous' || 
+                         p.subCategory === selectedSubCat ||
+                         (!p.subCategory && p.name.toLowerCase().includes(selectedSubCat.split(' ')[0].toLowerCase()));
+                         
+    const matchesSearch = p.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
+                         p.description.toLowerCase().includes(searchQuery.toLowerCase());
+    
+    return matchesRayon && matchesSubCat && matchesSearch;
+  }).sort((a, b) => {
+    if (sortBy === 'price-asc') return a.price - b.price;
+    if (sortBy === 'price-desc') return b.price - a.price;
+    return 0; // Keeping newest by default (as matched in DB order mostly)
   });
 
-  const categories = ['Tous', 'Épicerie', 'Boissons', 'Frais', 'Boucherie', 'Hygiène'];
+  const handleSelectNav = (rayon: string, subCat: string) => {
+    setSelectedRayon(rayon);
+    setSelectedSubCat(subCat);
+  };
 
   return (
-    <div className="container mx-auto px-4 py-8 space-y-10">
-      <div className="space-y-6">
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6">
-          <div>
-            <h1 className="text-4xl font-black tracking-tight text-slate-900">Catalogue CKDO</h1>
-            <p className="text-gray-500 mt-2">Le meilleur choix au Gabon, à portée de clic.</p>
+    <div className="min-h-screen bg-app-background pb-20">
+      <div className="container mx-auto px-4 py-8 space-y-10">
+        <header className="space-y-8">
+          <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6">
+            <div className="space-y-2">
+              <h1 className="text-4xl lg:text-5xl font-black tracking-tighter text-app-text uppercase">Le Magasin</h1>
+              <p className="text-gray-500 font-medium flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-brand-green animate-pulse" />
+                Mise à jour en temps réel • {filteredProducts.length} articles trouvés
+              </p>
+            </div>
+            
+            <div className="flex flex-col sm:flex-row gap-4 w-full lg:w-auto">
+              <div className="relative flex-1 sm:w-80">
+                <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+                <input 
+                  type="text" 
+                  placeholder="Chercher un article..." 
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full bg-card-bg border border-border-subtle rounded-2xl py-4 pl-12 pr-4 shadow-sm focus:ring-4 focus:ring-brand-blue/10 focus:border-brand-blue outline-none transition-all placeholder:text-gray-400 font-medium text-app-text"
+                />
+              </div>
+
+              <div className="relative inline-block w-full sm:w-48">
+                <select 
+                  value={sortBy}
+                  onChange={(e) => setSortBy(e.target.value as any)}
+                  className="w-full appearance-none bg-card-bg border border-border-subtle rounded-2xl py-4 pl-4 pr-10 shadow-sm focus:ring-4 focus:ring-brand-blue/10 focus:border-brand-blue outline-none font-bold text-sm uppercase tracking-tight text-app-text"
+                >
+                  <option value="newest">Nouveautés</option>
+                  <option value="price-asc">Prix croissant</option>
+                  <option value="price-desc">Prix décroissant</option>
+                </select>
+                <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
+              </div>
+            </div>
           </div>
           
-          <div className="relative w-full md:w-80">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
-            <input 
-              type="text" 
-              placeholder="Rechercher un produit..." 
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full bg-white border border-gray-100 rounded-2xl py-4 pl-12 pr-4 shadow-sm focus:ring-2 focus:ring-brand-blue/10 focus:border-brand-blue outline-none transition-all"
+          <div className="p-1 bg-app-background rounded-[2.5rem] shadow-inner border border-border-subtle">
+            <CategoryNav 
+              onSelectCategory={handleSelectNav} 
+              activeCategory={selectedRayon}
+              activeSubCategory={selectedSubCat}
             />
           </div>
-        </div>
+        </header>
 
-        <div className="flex items-center gap-3 overflow-x-auto pb-4 scrollbar-hide">
-          {categories.map((cat) => (
-            <button
-              key={cat}
-              onClick={() => setSelectedCategory(cat)}
-              className={`px-8 py-3 rounded-xl text-sm font-bold whitespace-nowrap transition-all border-2 ${
-                selectedCategory === cat 
-                ? 'border-brand-blue bg-brand-blue text-white shadow-xl shadow-brand-blue/20' 
-                : 'bg-white text-gray-500 hover:border-gray-200 border-transparent shadow-sm'
-              }`}
-            >
-              {cat}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {filteredProducts.length > 0 ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-6 md:gap-8">
-          {filteredProducts.map((product) => (
-            <ProductCard 
-              key={product.id} 
-              product={product} 
-              onAddToCart={onAddToCart} 
-            />
-          ))}
-        </div>
-      ) : (
-        <div className="py-20 text-center space-y-4 bg-white rounded-3xl border border-dashed border-gray-200">
-          <div className="bg-gray-50 h-20 w-20 rounded-full flex items-center justify-center mx-auto text-gray-400">
-            <Search className="h-10 w-10" />
+        {loadingProducts ? (
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4 md:gap-6">
+            {[...Array(12)].map((_, i) => (
+              <div key={i} className="aspect-[3/4] bg-gray-100 animate-pulse rounded-3xl" />
+            ))}
           </div>
-          <p className="text-gray-500 font-medium">Aucun produit ne correspond à votre recherche.</p>
-          <button 
-            onClick={() => { setSearchQuery(''); setSelectedCategory('Tous'); }}
-            className="text-brand-blue font-bold px-6 py-2 hover:bg-brand-blue/5 rounded-xl transition-colors"
+        ) : filteredProducts.length > 0 ? (
+          <motion.div 
+            layout
+            className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4 md:gap-6"
           >
-            Réinitialiser les filtres
-          </button>
-        </div>
-      )}
+            <AnimatePresence>
+              {filteredProducts.map((product) => (
+                <div key={product.id}>
+                  <ProductCard 
+                    product={product} 
+                    onAddToCart={onAddToCart} 
+                  />
+                </div>
+              ))}
+            </AnimatePresence>
+          </motion.div>
+        ) : (
+          <div className="py-32 text-center space-y-6 bg-card-bg rounded-[3rem] border border-dashed border-border-subtle">
+            <div className="bg-app-background h-24 w-24 rounded-full flex items-center justify-center mx-auto text-gray-300">
+              <Search size={48} />
+            </div>
+            <div className="space-y-2">
+              <h3 className="text-2xl font-black text-app-text uppercase tracking-tight">Aucun résultat</h3>
+              <p className="text-gray-500 font-medium max-w-xs mx-auto">Nous n'avons pas trouvé de produits correspondant à "<strong>{searchQuery}</strong>".</p>
+            </div>
+            <button 
+              onClick={() => { setSearchQuery(''); setSelectedRayon('Tous'); setSelectedSubCat('Tous'); }}
+              className="btn-secondary px-8 py-3 rounded-2xl font-bold"
+            >
+              Réinitialiser tout
+            </button>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

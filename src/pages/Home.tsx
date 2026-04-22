@@ -1,15 +1,27 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowRight, ShoppingBag, Clock, ShieldCheck, PhoneCall } from 'lucide-react';
+import { ArrowRight, ShoppingBag, Clock, ShieldCheck, PhoneCall, Star } from 'lucide-react';
 import { motion } from 'motion/react';
 import { formatPrice } from '../lib/utils';
+import { Product } from '../types';
+import { productService } from '../services/productService';
 
-export default function Home({ onAddToCart }: { onAddToCart: (p: any) => void }) {
+export default function Home({ onAddToCart }: { onAddToCart: (p: Product) => void }) {
+  const [products, setProducts] = useState<Product[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const unsub = productService.subscribeToActiveProducts((fetched) => {
+      setProducts(fetched.filter(p => p.isActive).slice(0, 4));
+      setLoading(false);
+    });
+    return () => unsub();
+  }, []);
   const featuredCategories = [
-    { name: 'Épicerie', icon: '🥫', id: 'epicerie' },
-    { name: 'Frais', icon: '🥬', id: 'frais' },
-    { name: 'Boissons', icon: '🥤', id: 'boissons' },
-    { name: 'Boucherie', icon: '🥩', id: 'boucherie' },
+    { name: 'Alimentaire', icon: '🥫', id: 'alimentaire' },
+    { name: 'Produits Frais', icon: '🥩', id: 'frais' },
+    { name: 'Fruits & Légumes', icon: '🥬', id: 'fruits-legumes' },
+    { name: 'Surgelés', icon: '❄️', id: 'surgeles' },
   ];
 
   return (
@@ -62,6 +74,71 @@ export default function Home({ onAddToCart }: { onAddToCart: (p: any) => void })
             </motion.div>
           ))}
         </div>
+      </section>
+
+      {/* Featured Products */}
+      <section className="container mx-auto px-4">
+        <div className="flex items-center justify-between mb-8">
+          <h2 className="text-3xl font-black text-slate-900 tracking-tight">En ce moment</h2>
+          <Link to="/products" className="text-brand-blue font-bold flex items-center gap-2 hover:underline">
+            Voir tout
+            <ArrowRight className="h-4 w-4" />
+          </Link>
+        </div>
+
+        {loading ? (
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+            {[1, 2, 3, 4].map(i => (
+              <div key={i} className="bg-gray-100 animate-pulse rounded-3xl h-80" />
+            ))}
+          </div>
+        ) : (
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+            {products.map((product) => (
+              <motion.div
+                key={product.id}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                className="group bg-white rounded-3xl border border-gray-100 overflow-hidden hover:shadow-xl transition-all duration-300"
+              >
+                <div className="relative aspect-square overflow-hidden bg-gray-50">
+                  <img 
+                    src={product.imageUrl} 
+                    alt={product.name}
+                    className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+                    referrerPolicy="no-referrer"
+                  />
+                  {product.isPromo && (
+                    <div className="absolute top-3 left-3 bg-brand-red text-white text-[10px] font-black uppercase px-2 py-1 rounded-full">
+                      Promo
+                    </div>
+                  )}
+                </div>
+                <div className="p-4 space-y-3">
+                  <div className="flex items-center gap-1">
+                    <Star className="h-3 w-3 fill-amber-400 text-amber-400" />
+                    <span className="text-xs font-bold text-gray-400">4.9 (120)</span>
+                  </div>
+                  <h3 className="font-bold text-gray-900 group-hover:text-brand-blue transition-colors line-clamp-1">{product.name}</h3>
+                  <div className="flex items-center justify-between">
+                    <div className="flex flex-col">
+                      <span className="text-lg font-black text-slate-900">{formatPrice(product.price)}</span>
+                      {product.promoPrice && (
+                        <span className="text-xs text-gray-400 line-through">{formatPrice(product.promoPrice)}</span>
+                      )}
+                    </div>
+                    <button 
+                      onClick={() => onAddToCart(product)}
+                      className="bg-brand-green/10 text-brand-green p-2.5 rounded-2xl hover:bg-brand-green hover:text-white transition-all transform hover:scale-105 active:scale-95"
+                    >
+                      <ShoppingBag className="h-5 w-5" />
+                    </button>
+                  </div>
+                </div>
+              </motion.div>
+            ))}
+          </div>
+        )}
       </section>
 
       {/* Trust Badges */}
