@@ -4,6 +4,7 @@ service cloud.firestore {
     
     // --- Fonctions d'aide ---
     function isSignedIn() { return request.auth != null; }
+    function isEmailVerified() { return isSignedIn() && request.auth.token.email_verified == true; }
     
     // ACCÈS TOTAL pour les administrateurs par email
     function isSuperAdmin() {
@@ -32,9 +33,8 @@ service cloud.firestore {
       allow list: if isAdmin();
       allow create: if isSignedIn() && request.auth.uid == userId;
       allow update: if isSignedIn() && request.auth.uid == userId && (
-        // Permet de modifier ses infos ET son rôle si on est un Super Admin (bootstrap)
         request.resource.data.diff(resource.data).affectedKeys().hasOnly([
-          'displayName', 'phoneNumber', 'updatedAt', 'role', 'favorites', 'addresses', 'firstName', 'lastName'
+          'displayName', 'phoneNumber', 'updatedAt', 'role', 'favorites', 'addresses', 'firstName', 'lastName', 'photoURL', 'settings', 'security'
         ])
       );
     }
@@ -48,7 +48,7 @@ service cloud.firestore {
     match /orders/{orderId} {
       allow get, list: if isSignedIn() && (resource.data.customerId == request.auth.uid || isAdmin());
       allow create: if isSignedIn() && request.resource.data.customerId == request.auth.uid;
-      allow update: if isAdmin() || (isSignedIn() && resource.data.customerId == request.auth.uid);
+      allow update: if isAdmin() || (isSignedIn() && resource.data.customerId == request.auth.uid && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status']));
     }
   }
 }

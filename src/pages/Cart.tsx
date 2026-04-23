@@ -20,12 +20,12 @@ export default function Cart({ cart, setCart }: { cart: any[]; setCart: any }) {
 
   if (cart.length === 0) {
     return (
-      <div className="container mx-auto px-4 py-20 text-center space-y-6">
-        <div className="bg-gray-100 h-24 w-24 rounded-full flex items-center justify-center mx-auto">
+      <div className="container mx-auto px-4 py-20 text-center space-y-6 bg-app-background min-h-[60vh] flex flex-col items-center justify-center">
+        <div className="bg-card-bg h-24 w-24 rounded-full flex items-center justify-center mx-auto border border-border-subtle shadow-sm">
           <ShoppingBag className="h-12 w-12 text-gray-400" />
         </div>
-        <h2 className="text-2xl font-bold">Votre panier est vide</h2>
-        <p className="text-gray-500 max-w-xs mx-auto">Comencez à ajouter des produits pour faire vos courses en toute simplicité.</p>
+        <h2 className="text-2xl font-bold text-app-text">Votre panier est vide</h2>
+        <p className="text-gray-400 max-w-xs mx-auto">Commencez à ajouter des produits pour faire vos courses en toute simplicité.</p>
         <Link to="/products" className="inline-block bg-brand-blue text-white px-8 py-3 rounded-full font-bold hover:bg-brand-blue-light transition-colors">
           Voir les produits
         </Link>
@@ -34,14 +34,14 @@ export default function Cart({ cart, setCart }: { cart: any[]; setCart: any }) {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8 lg:py-12">
-      <h1 className="text-3xl font-black mb-8">Votre Panier</h1>
+    <div className="container mx-auto px-4 py-8 lg:py-12 bg-app-background min-h-[80vh]">
+      <h1 className="text-3xl font-black mb-8 text-app-text">Votre Panier</h1>
 
       <div className="grid lg:grid-cols-3 gap-10">
         <div className="lg:col-span-2 space-y-6">
           {cart.map((item) => (
-            <div key={item.id} className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 flex gap-4">
-              <div className="h-24 w-24 rounded-xl overflow-hidden bg-gray-50 shrink-0">
+            <div key={item.id} className="bg-card-bg p-4 rounded-2xl shadow-sm border border-border-subtle flex gap-4">
+              <div className="h-24 w-24 rounded-xl overflow-hidden bg-app-background shrink-0">
                 <img 
                   src={item.imageUrl || `https://picsum.photos/seed/${item.id}/200/200`} 
                   alt={item.name} 
@@ -52,27 +52,27 @@ export default function Cart({ cart, setCart }: { cart: any[]; setCart: any }) {
               
               <div className="flex-1 flex flex-col justify-between py-1">
                 <div>
-                  <h3 className="font-bold text-gray-900 leading-tight">{item.name}</h3>
-                  <p className="text-sm text-gray-500 uppercase font-bold text-[10px] tracking-tight">{item.category}</p>
+                  <h3 className="font-bold text-app-text leading-tight">{item.name}</h3>
+                  <p className="text-sm text-gray-400 uppercase font-bold text-[10px] tracking-tight">{item.category}</p>
                 </div>
                 <div className="flex items-center justify-between mt-2">
-                  <div className="flex items-center gap-3 bg-gray-50 rounded-lg p-1 border border-gray-100">
+                  <div className="flex items-center gap-3 bg-app-background rounded-lg p-1 border border-border-subtle">
                     <button 
                       onClick={() => updateQuantity(item.id, -1)}
-                      className="p-1 hover:bg-white hover:shadow-sm rounded-md transition-all disabled:opacity-30"
+                      className="p-1 hover:bg-card-bg hover:shadow-sm rounded-md transition-all disabled:opacity-30 text-app-text"
                       disabled={item.quantity === 1}
                     >
                       <Minus className="h-4 w-4" />
                     </button>
-                    <span className="font-bold w-6 text-center text-sm">{item.quantity}</span>
+                    <span className="font-bold w-6 text-center text-sm text-app-text">{item.quantity}</span>
                     <button 
                       onClick={() => updateQuantity(item.id, 1)}
-                      className="p-1 hover:bg-white hover:shadow-sm rounded-md transition-all"
+                      className="p-1 hover:bg-card-bg hover:shadow-sm rounded-md transition-all text-app-text"
                     >
                       <Plus className="h-4 w-4" />
                     </button>
                   </div>
-                  <span className="font-black text-lg">
+                  <span className="font-black text-lg text-app-text">
                     {formatPrice((item.isPromo ? item.promoPrice : item.price) * item.quantity)}
                   </span>
                 </div>
@@ -80,7 +80,7 @@ export default function Cart({ cart, setCart }: { cart: any[]; setCart: any }) {
 
               <button 
                 onClick={() => removeItem(item.id)}
-                className="text-gray-300 hover:text-brand-blue transition-colors p-2 self-start"
+                className="text-gray-400 hover:text-brand-blue transition-colors p-2 self-start"
               >
                 <Trash2 className="h-5 w-5" />
               </button>
@@ -89,9 +89,9 @@ export default function Cart({ cart, setCart }: { cart: any[]; setCart: any }) {
         </div>
 
         <div className="space-y-6">
-          <div className="bg-white p-8 rounded-3xl shadow-lg border border-gray-100 space-y-6 sticky top-24">
-            <h2 className="text-xl font-bold">Récapitulatif</h2>
-            <div className="space-y-3 text-gray-600">
+          <div className="bg-card-bg p-8 rounded-3xl shadow-lg border border-border-subtle space-y-6 sticky top-24">
+            <h2 className="text-xl font-bold text-app-text">Récapitulatif</h2>
+            <div className="space-y-3 text-gray-400">
               <div className="flex justify-between">
                 <span>Sous-total</span>
                 <span>{formatPrice(total)}</span>
@@ -100,10 +100,10 @@ export default function Cart({ cart, setCart }: { cart: any[]; setCart: any }) {
                 <span>Frais Click & Collect</span>
                 <span className="text-brand-green font-bold uppercase text-[10px]">Gratuit</span>
               </div>
-              <div className="h-px bg-gray-100 my-4" />
-              <div className="flex justify-between text-xl font-black text-slate-900">
+              <div className="h-px bg-border-subtle my-4" />
+              <div className="flex justify-between text-xl font-black text-app-text">
                 <span>Total</span>
-                <span>{formatPrice(total)}</span>
+                <span className="text-brand-blue">{formatPrice(total)}</span>
               </div>
             </div>
 

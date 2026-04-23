@@ -40,7 +40,8 @@ import {
   Building,
   Bell,
   Globe,
-  CreditCard
+  CreditCard,
+  FileText
 } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
 import { motion, AnimatePresence } from 'motion/react';
@@ -62,6 +63,7 @@ import { MOCK_PRODUCTS } from '../constants/products';
 import { productService } from '../services/productService';
 import { userService } from '../services/userService';
 import { orderService } from '../services/orderService';
+import InvoiceModal from '../components/orders/InvoiceModal';
 
 type AdminTab = 'overview' | 'products' | 'orders' | 'customers' | 'settings';
 
@@ -74,6 +76,13 @@ export default function AdminDashboard({ user }: { user: UserProfile | null }) {
   const [loading, setLoading] = useState(true);
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [newOrdersCount, setNewOrdersCount] = useState(0);
+  const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
+  const [isInvoiceOpen, setIsInvoiceOpen] = useState(false);
+
+  const openInvoice = (order: Order) => {
+    setSelectedOrder(order);
+    setIsInvoiceOpen(true);
+  };
 
   // Stats
   const [stats, setStats] = useState({
@@ -235,8 +244,8 @@ export default function AdminDashboard({ user }: { user: UserProfile | null }) {
 
       {/* Main Content */}
       <main className="flex-1 overflow-y-auto">
-        <header className="bg-white/80 backdrop-blur-md border-b border-gray-100 p-6 sticky top-0 z-10 flex justify-between items-center">
-          <h2 className="text-xl font-bold text-gray-800 uppercase tracking-tight">
+        <header className="bg-card-bg/80 backdrop-blur-md border-b border-border-subtle p-6 sticky top-0 z-10 flex justify-between items-center">
+          <h2 className="text-xl font-bold text-app-text uppercase tracking-tight">
             {activeTab === 'overview' && 'Tableau de bord'}
             {activeTab === 'products' && 'Gestion Catalogue'}
             {activeTab === 'orders' && 'Commandes Clients'}
@@ -245,7 +254,7 @@ export default function AdminDashboard({ user }: { user: UserProfile | null }) {
           </h2>
           <div className="flex items-center gap-4">
             <div className="text-right hidden sm:block">
-              <p className="text-sm font-black text-slate-900">{user?.displayName || 'Administrateur'}</p>
+              <p className="text-sm font-black text-app-text">{user?.displayName || 'Administrateur'}</p>
               <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">{user?.email}</p>
             </div>
             <img 
@@ -257,12 +266,19 @@ export default function AdminDashboard({ user }: { user: UserProfile | null }) {
         </header>
 
         <div className="p-4 md:p-8">
-          {activeTab === 'overview' && <OverviewTab stats={stats} chartData={chartData} orders={orders} />}
+          {activeTab === 'overview' && <OverviewTab stats={stats} chartData={chartData} orders={orders} onOpenInvoice={openInvoice} />}
           {activeTab === 'products' && <ProductsTab products={products} />}
-          {activeTab === 'orders' && <OrdersTab orders={orders} />}
+          {activeTab === 'orders' && <OrdersTab orders={orders} onOpenInvoice={openInvoice} />}
           {activeTab === 'customers' && <CustomersTab customers={customers} />}
           {activeTab === 'settings' && <SettingsTab user={user} />}
         </div>
+
+        <InvoiceModal 
+          isOpen={isInvoiceOpen}
+          onClose={() => setIsInvoiceOpen(false)}
+          order={selectedOrder}
+          customer={customers.find(c => c.uid === selectedOrder?.customerId) || { displayName: 'Client' }}
+        />
       </main>
     </div>
   );
@@ -277,7 +293,7 @@ function SidebarItem({ icon, label, active, onClick, collapsed, badge }: any) {
       className={`w-full flex items-center gap-4 p-4 rounded-2xl transition-all font-bold relative ${
         active 
         ? 'bg-brand-blue text-white shadow-lg shadow-brand-blue/20' 
-        : 'text-gray-500 hover:bg-gray-100 hover:text-slate-900'
+        : 'text-gray-400 hover:bg-app-background hover:text-app-text'
       }`}
     >
       <span className="shrink-0">{icon}</span>
@@ -314,7 +330,7 @@ function StatCard({ label, value, icon, trend, color }: any) {
 
 // --- TABS ---
 
-function OverviewTab({ stats, chartData, orders }: any) {
+function OverviewTab({ stats, chartData, orders, onOpenInvoice }: any) {
   const { theme } = useTheme();
   const recentOrders = [...orders].sort((a, b) => {
     const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
@@ -393,7 +409,7 @@ function OverviewTab({ stats, chartData, orders }: any) {
               </div>
             )}
             {recentOrders.map((order: any) => (
-              <div key={order.id} className="flex gap-4 group">
+              <div key={order.id} className="flex gap-4 group cursor-pointer" onClick={() => onOpenInvoice(order)}>
                 <div className={`w-2 h-2 rounded-full mt-2 shrink-0 ${
                   order.status === 'paid' ? 'bg-blue-500' : 'bg-yellow-500'
                 }`} />
@@ -514,7 +530,7 @@ function ProductsTab({ products }: any) {
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <h3 className="text-2xl font-black text-slate-900">Catalogue</h3>
+        <h3 className="text-2xl font-black text-app-text">Catalogue</h3>
         <button 
           onClick={() => { setEditingProduct(null); setShowModal(true); }}
           className="btn-primary px-6 py-3 rounded-2xl flex items-center gap-2 font-bold shadow-lg shadow-brand-blue/20"
@@ -556,7 +572,7 @@ function ProductsTab({ products }: any) {
                     <span className="font-black text-brand-blue">{formatPrice(p.price)}</span>
                   </td>
                   <td className="px-6 py-4">
-                    <span className={`text-sm font-bold ${p.stock < 10 ? 'text-red-500' : 'text-gray-900'}`}>{p.stock}</span>
+                    <span className={`text-sm font-bold ${p.stock < 10 ? 'text-red-500' : 'text-app-text'}`}>{p.stock}</span>
                   </td>
                   <td className="px-6 py-4">
                     <div className="flex justify-center gap-2">
@@ -718,9 +734,7 @@ function ProductsTab({ products }: any) {
   );
 }
 
-function OrdersTab({ orders }: any) {
-  const [filter, setFilter] = useState('all');
-
+function OrdersTab({ orders, onOpenInvoice }: any) {
   const updateStatus = async (id: string, status: string) => {
     await updateDoc(doc(db, 'orders', id), { 
       status, 
@@ -728,19 +742,20 @@ function OrdersTab({ orders }: any) {
     });
   };
 
+  const [filter, setFilter] = useState('all');
   const filtered = filter === 'all' ? orders : orders.filter((o: any) => o.status === filter);
 
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <h3 className="text-2xl font-black text-slate-900">Commandes</h3>
-        <div className="flex gap-2 bg-white p-1 rounded-xl border border-gray-100 shadow-sm overflow-x-auto max-w-full">
+        <h3 className="text-2xl font-black text-app-text">Commandes</h3>
+        <div className="flex gap-2 bg-card-bg p-1 rounded-xl border border-border-subtle shadow-sm overflow-x-auto max-w-full">
           {['all', 'pending', 'paid', 'preparing', 'ready', 'delivered'].map((s) => (
             <button
               key={s}
               onClick={() => setFilter(s)}
               className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest whitespace-nowrap transition-all ${
-                filter === s ? 'bg-slate-900 text-white' : 'text-gray-400 hover:bg-gray-50'
+                filter === s ? 'bg-app-text text-app-background' : 'text-gray-400 hover:bg-app-background hover:text-app-text'
               }`}
             >
               {s}
@@ -751,15 +766,20 @@ function OrdersTab({ orders }: any) {
 
       <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
         {filtered.map((order: any) => (
-          <div key={order.id} className="bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden flex flex-col hover:border-brand-blue/20 transition-all group">
-            <div className="p-6 border-b border-gray-50 flex justify-between items-start">
+          <div key={order.id} className="bg-card-bg rounded-3xl border border-border-subtle shadow-sm overflow-hidden flex flex-col hover:border-brand-blue/20 transition-all group">
+            <div className="p-6 border-b border-border-subtle flex justify-between items-start">
               <div>
                 <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">#{order.id.slice(0,8)}</p>
-                <p className="text-xs font-bold text-gray-500">{new Date(order.createdAt).toLocaleDateString()}</p>
+                <p className="text-xs font-bold text-gray-400">
+                  {order.createdAt && (order.createdAt as any).seconds 
+                    ? new Date((order.createdAt as any).seconds * 1000).toLocaleDateString()
+                    : new Date(order.createdAt).toLocaleDateString()
+                  }
+                </p>
               </div>
               <span className={`px-2 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest ${
-                order.status === 'delivered' ? 'bg-green-100 text-green-700' : 
-                order.status === 'paid' ? 'bg-blue-100 text-blue-700' : 'bg-yellow-100 text-yellow-700'
+                order.status === 'delivered' ? 'bg-green-500/10 text-green-500' : 
+                order.status === 'paid' ? 'bg-brand-blue/10 text-brand-blue' : 'bg-amber-500/10 text-amber-500'
               }`}>
                 {order.status}
               </span>
@@ -769,40 +789,49 @@ function OrdersTab({ orders }: any) {
               <div className="space-y-2">
                 {order.items.map((item: any, i: number) => (
                   <div key={i} className="flex justify-between text-sm">
-                    <span className="text-gray-600 font-medium">{item.quantity}x {item.name}</span>
+                    <span className="text-gray-400 font-medium">{item.quantity}x {item.name}</span>
                     <span className="text-gray-400">{formatPrice(item.price * item.quantity)}</span>
                   </div>
                 ))}
               </div>
-              <div className="flex justify-between items-center pt-4 border-t border-gray-50">
+              <div className="flex justify-between items-center pt-4 border-t border-border-subtle">
                 <span className="font-bold text-gray-400 text-sm italic">{order.paymentMethod === 'momov' ? 'Airtel Money' : 'Cash'}</span>
-                <span className="font-black text-slate-900">{formatPrice(order.totalAmount)}</span>
+                <span className="font-black text-app-text">{formatPrice(order.totalAmount)}</span>
               </div>
             </div>
 
-            <div className="p-4 bg-gray-50 border-t border-gray-100 grid grid-cols-2 gap-2">
-                {(order.status === 'paid' || order.status === 'pending') && (
-                  <>
-                    <button 
-                      onClick={() => updateStatus(order.id, 'preparing')} 
-                      className="py-2 bg-brand-blue text-white rounded-xl text-[10px] font-bold uppercase tracking-wider shadow-sm"
-                    >
-                      Préparer
-                    </button>
-                    <button 
-                      onClick={() => updateStatus(order.id, 'cancelled')} 
-                      className="py-2 bg-white border border-red-100 text-red-500 rounded-xl text-[10px] font-bold uppercase tracking-wider shadow-sm hover:bg-red-50 transition-colors"
-                    >
-                      Refuser
-                    </button>
-                  </>
-                )}
-                {order.status === 'preparing' && (
-                  <button onClick={() => updateStatus(order.id, 'ready')} className="col-span-2 py-2 bg-purple-600 text-white rounded-xl text-[10px] font-bold uppercase tracking-wider">Prête</button>
-                )}
-                {order.status === 'ready' && (
-                  <button onClick={() => updateStatus(order.id, 'delivered')} className="col-span-2 py-2 bg-green-600 text-white rounded-xl text-[10px] font-bold uppercase tracking-wider">Livrer</button>
-                )}
+            <div className="p-4 bg-app-background border-t border-border-subtle flex flex-col gap-2">
+                <button 
+                  onClick={() => onOpenInvoice(order)}
+                  className="w-full py-2 bg-card-bg border border-border-subtle text-app-text rounded-xl text-[10px] font-bold uppercase tracking-wider shadow-sm flex items-center justify-center gap-2 hover:bg-brand-blue hover:text-white transition-all"
+                >
+                  <FileText size={14} /> Voir Facture
+                </button>
+                
+                <div className="grid grid-cols-2 gap-2">
+                  {(order.status === 'paid' || order.status === 'pending') && (
+                    <>
+                      <button 
+                        onClick={() => updateStatus(order.id, 'preparing')} 
+                        className="py-2 bg-brand-blue text-white rounded-xl text-[10px] font-bold uppercase tracking-wider shadow-sm"
+                      >
+                        Préparer
+                      </button>
+                      <button 
+                        onClick={() => updateStatus(order.id, 'cancelled')} 
+                        className="py-2 bg-card-bg border border-red-500/20 text-red-500 rounded-xl text-[10px] font-bold uppercase tracking-wider shadow-sm hover:bg-red-500/10 transition-colors"
+                      >
+                        Refuser
+                      </button>
+                    </>
+                  )}
+                  {order.status === 'preparing' && (
+                    <button onClick={() => updateStatus(order.id, 'ready')} className="col-span-2 py-2 bg-purple-600 text-white rounded-xl text-[10px] font-bold uppercase tracking-wider">Prête</button>
+                  )}
+                  {order.status === 'ready' && (
+                    <button onClick={() => updateStatus(order.id, 'delivered')} className="col-span-2 py-2 bg-green-600 text-white rounded-xl text-[10px] font-bold uppercase tracking-wider">Livrer</button>
+                  )}
+                </div>
             </div>
           </div>
         ))}
@@ -817,13 +846,13 @@ function CustomersTab({ customers }: any) {
   };
 
   return (
-    <div className="bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden">
-      <div className="p-6 border-b border-gray-50">
-        <h3 className="text-xl font-black">Gestion Clients</h3>
+    <div className="bg-card-bg rounded-3xl border border-border-subtle shadow-sm overflow-hidden">
+      <div className="p-6 border-b border-border-subtle">
+        <h3 className="text-xl font-black text-app-text">Gestion Clients</h3>
       </div>
       <div className="overflow-x-auto">
         <table className="w-full text-left">
-          <thead className="bg-gray-50">
+          <thead className="bg-app-background">
             <tr>
               <th className="px-6 py-4 text-xs font-black uppercase text-gray-400">Client</th>
               <th className="px-6 py-4 text-xs font-black uppercase text-gray-400">Email</th>
@@ -832,19 +861,19 @@ function CustomersTab({ customers }: any) {
               <th className="px-6 py-4 text-xs font-black uppercase text-gray-400 text-center">Action</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-gray-50">
+          <tbody className="divide-y divide-border-subtle">
             {customers.map((c: any) => (
               <tr key={c.id}>
                 <td className="px-6 py-4">
-                  <div className="flex items-center gap-3">
-                    <img src={c.photoURL || 'https://via.placeholder.com/40'} className="w-8 h-8 rounded-full border" alt="" />
-                    <span className="font-bold text-slate-800">{c.displayName || 'Utilisateur'}</span>
+                  <div className="flex items-center gap-3 font-sans">
+                    <img src={c.photoURL || 'https://via.placeholder.com/40'} className="w-8 h-8 rounded-full border border-border-subtle" alt="" />
+                    <span className="font-bold text-app-text">{c.displayName || 'Utilisateur'}</span>
                   </div>
                 </td>
-                <td className="px-6 py-4 text-sm text-gray-500">{c.email}</td>
+                <td className="px-6 py-4 text-sm text-gray-400">{c.email}</td>
                 <td className="px-6 py-4">
                   <span className={`text-[10px] font-black uppercase tracking-widest px-2 py-1 rounded-lg ${
-                    c.role === 'admin' ? 'bg-brand-blue text-white' : 'bg-gray-100 text-gray-500'
+                    c.role === 'admin' ? 'bg-brand-blue text-white' : 'bg-app-background text-gray-400'
                   }`}>{c.role}</span>
                 </td>
                 <td className="px-6 py-4">
@@ -857,7 +886,7 @@ function CustomersTab({ customers }: any) {
                   <button 
                     onClick={() => toggleBlock(c.id, c.isBlocked)}
                     className={`text-[10px] font-black uppercase tracking-widest px-4 py-2 border rounded-xl transition-all ${
-                      c.isBlocked ? 'border-green-100 text-green-600 hover:bg-green-50' : 'border-red-100 text-red-600 hover:bg-red-50'
+                      c.isBlocked ? 'border-green-500/20 text-green-500 hover:bg-green-500/10' : 'border-red-500/20 text-red-500 hover:bg-red-500/10'
                     }`}
                   >
                     {c.isBlocked ? 'Débloquer' : 'Bloquer'}

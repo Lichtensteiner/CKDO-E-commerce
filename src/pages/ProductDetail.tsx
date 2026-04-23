@@ -91,11 +91,11 @@ export default function ProductDetail({ onAddToCart, user }: { onAddToCart: (p: 
     fetchProductDetails();
   }, [id]);
 
-  if (loading) return <div className="py-20 text-center text-gray-400">Chargement...</div>;
-  if (!product) return <div className="py-20 text-center text-gray-400 text-xl font-bold">Produit non trouvé</div>;
+  if (loading) return <div className="py-20 text-center text-gray-500">Chargement...</div>;
+  if (!product) return <div className="py-20 text-center text-app-text text-xl font-bold">Produit non trouvé</div>;
 
   return (
-    <div className="container mx-auto px-4 py-8 lg:py-12 space-y-16">
+    <div className="container mx-auto px-4 py-8 lg:py-12 space-y-16 bg-app-background min-h-screen">
       <button 
         onClick={() => navigate(-1)} 
         className="flex items-center gap-2 text-gray-500 hover:text-brand-blue font-bold transition-colors group"
@@ -109,7 +109,7 @@ export default function ProductDetail({ onAddToCart, user }: { onAddToCart: (p: 
         <motion.div 
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
-          className="bg-white rounded-3xl overflow-hidden border border-gray-100 shadow-xl"
+          className="bg-card-bg rounded-3xl overflow-hidden border border-border-subtle shadow-xl"
         >
           <img 
             src={product.imageUrl} 
@@ -125,29 +125,29 @@ export default function ProductDetail({ onAddToCart, user }: { onAddToCart: (p: 
             <span className="px-4 py-1.5 bg-brand-blue/10 text-brand-blue rounded-full text-xs font-black uppercase tracking-widest border border-brand-blue/20">
               {product.category}
             </span>
-            <h1 className="text-4xl lg:text-5xl font-black text-slate-900 leading-tight">
+            <h1 className="text-4xl lg:text-5xl font-black text-app-text leading-tight uppercase tracking-tighter">
               {product.name}
             </h1>
             <div className="flex items-baseline gap-4">
                {product.isPromo ? (
                  <>
                    <span className="text-4xl font-black text-brand-red">{formatPrice(product.promoPrice)}</span>
-                   <span className="text-xl text-gray-400 line-through">{formatPrice(product.price)}</span>
+                   <span className="text-xl text-gray-500 line-through">{formatPrice(product.price)}</span>
                  </>
                ) : (
-                 <span className="text-4xl font-black text-slate-900">{formatPrice(product.price)}</span>
+                 <span className="text-4xl font-black text-app-text">{formatPrice(product.price)}</span>
                )}
             </div>
           </div>
 
-          <p className="text-gray-600 text-lg leading-relaxed">
+          <p className="text-gray-400 text-lg leading-relaxed font-medium">
             {product.description || "Découvrez la qualité CKDO avec ce produit sélectionné avec soin pour répondre à vos besoins quotidiens. Frais, authentique et au meilleur prix au Gabon."}
           </p>
 
           <div className="flex flex-col sm:flex-row gap-4 pt-4">
             <button 
               onClick={() => onAddToCart(product)}
-              className="flex-1 btn-primary h-16 rounded-2xl flex items-center justify-center gap-3 font-bold text-lg"
+              className="flex-1 btn-primary h-16 rounded-2xl flex items-center justify-center gap-3 font-bold text-lg shadow-xl shadow-brand-blue/20"
             >
               <ShoppingCart className="h-6 w-6" />
               Ajouter au panier
@@ -157,32 +157,32 @@ export default function ProductDetail({ onAddToCart, user }: { onAddToCart: (p: 
               className={`w-16 h-16 rounded-2xl border-2 flex items-center justify-center transition-all ${
                 isFavorite 
                 ? 'bg-brand-red/10 border-brand-red text-brand-red' 
-                : 'bg-white border-gray-100 text-gray-400 hover:border-brand-red hover:text-brand-red'
+                : 'bg-card-bg border-border-subtle text-gray-400 hover:border-brand-red hover:text-brand-red'
               }`}
             >
               <Heart className={`h-6 w-6 ${isFavorite ? 'fill-current' : ''}`} />
             </button>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 pt-10 border-t border-gray-100">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 pt-10 border-t border-border-subtle">
             <div className="flex items-center gap-3">
               <ShieldCheck className="h-10 w-10 text-brand-green shrink-0" />
               <div>
-                <p className="font-bold text-sm">Qualité Garantie</p>
+                <p className="font-bold text-sm text-app-text">Qualité Garantie</p>
                 <p className="text-xs text-gray-500">Sélection strict</p>
               </div>
             </div>
             <div className="flex items-center gap-3">
               <Truck className="h-10 w-10 text-brand-blue shrink-0" />
               <div>
-                <p className="font-bold text-sm">Click & Collect</p>
+                <p className="font-bold text-sm text-app-text">Click & Collect</p>
                 <p className="text-xs text-gray-500">Rapide et gratuit</p>
               </div>
             </div>
             <div className="flex items-center gap-3">
               <RefreshCw className="h-10 w-10 text-brand-red shrink-0" />
               <div>
-                <p className="font-bold text-sm">Retour facile</p>
+                <p className="font-bold text-sm text-app-text">Retour facile</p>
                 <p className="text-xs text-gray-500">Sous 24h</p>
               </div>
             </div>
@@ -192,10 +192,10 @@ export default function ProductDetail({ onAddToCart, user }: { onAddToCart: (p: 
 
       {/* Same Rayon Section */}
       {relatedProducts.length > 0 && (
-        <section className="space-y-8 pt-12 border-t border-gray-100">
+        <section className="space-y-8 pt-12 border-t border-border-subtle">
           <div className="flex justify-between items-end">
             <div>
-              <h2 className="text-2xl font-black text-slate-900">Dans le même rayon</h2>
+              <h2 className="text-2xl font-black text-app-text">Dans le même rayon</h2>
               <p className="text-gray-500">Découvrez d'autres marques et formats disponibles</p>
             </div>
             <Link to="/products" className="text-brand-blue font-bold flex items-center gap-1 hover:underline">
@@ -210,7 +210,7 @@ export default function ProductDetail({ onAddToCart, user }: { onAddToCart: (p: 
                 to={`/product/${rp.id}`}
                 className="group space-y-4"
               >
-                <div className="bg-white rounded-3xl overflow-hidden border border-gray-100 shadow-sm aspect-square group-hover:shadow-lg transition-all">
+                <div className="bg-card-bg rounded-3xl overflow-hidden border border-border-subtle shadow-sm aspect-square group-hover:shadow-lg transition-all">
                   <img 
                     src={rp.imageUrl} 
                     alt={rp.name} 
@@ -219,7 +219,7 @@ export default function ProductDetail({ onAddToCart, user }: { onAddToCart: (p: 
                   />
                 </div>
                 <div>
-                  <h3 className="font-bold text-sm line-clamp-2 min-h-[40px]">{rp.name}</h3>
+                  <h3 className="font-bold text-sm text-app-text line-clamp-2 min-h-[40px]">{rp.name}</h3>
                   <p className="font-black text-brand-blue">{formatPrice(rp.isPromo ? rp.promoPrice : rp.price)}</p>
                 </div>
               </Link>

@@ -7,17 +7,29 @@
   --color-brand-blue-dark: #1F3A7A;
   --color-brand-green: #28A745;
   --color-brand-red: #DC2626;
-  --color-app-background: #F5F7FB;
-  --color-app-text: #1A1A1A;
-  --color-card-bg: white;
-  --color-border-subtle: #F1F5F9;
+  --color-app-background: #FFFFFF;
+  --color-app-text: #000000;
+  --color-card-bg: #FFFFFF;
+  --color-border-subtle: #E2E8F0;
+  --color-gray-50: #F9FAFB;
+  --color-gray-100: #F3F4F6;
+  --color-gray-200: #E5E7EB;
+  --color-gray-400: #9CA3AF;
+  --color-gray-500: #6B7280;
+  --color-gray-600: #4B5563;
+  --color-slate-600: #475569;
+  --color-slate-800: #1E293B;
+  --color-slate-900: #0F172A;
+  --color-emerald-400: #34D399;
+  --color-green-500: #22C55E;
+  --color-amber-500: #F59E0B;
 }
 
 @theme dark {
-  --color-app-background: #0F172A;
-  --color-app-text: #F8FAFC;
-  --color-card-bg: #1E293B;
-  --color-border-subtle: #334155;
+  --color-app-background: #000000;
+  --color-app-text: #FFFFFF;
+  --color-card-bg: #0A0A0A;
+  --color-border-subtle: #1F2937;
   --color-brand-blue: #60A5FA;
 }
 

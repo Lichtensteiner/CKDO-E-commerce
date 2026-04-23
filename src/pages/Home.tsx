@@ -61,16 +61,16 @@ export default function Home({ onAddToCart }: { onAddToCart: (p: Product) => voi
 
       {/* Categories */}
       <section className="container mx-auto px-4">
-        <h2 className="text-2xl font-bold mb-8">Rayons populaires</h2>
+        <h2 className="text-2xl font-bold mb-8 text-app-text">Rayons populaires</h2>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
           {featuredCategories.map((cat, idx) => (
             <motion.div
               key={cat.id}
               whileHover={{ scale: 1.05 }}
-              className="bg-white p-6 rounded-3xl shadow-sm border border-gray-100 flex flex-col items-center text-center gap-4 cursor-pointer"
+              className="bg-card-bg p-6 rounded-3xl shadow-sm border border-border-subtle flex flex-col items-center text-center gap-4 cursor-pointer"
             >
               <span className="text-5xl">{cat.icon}</span>
-              <span className="font-bold text-gray-800">{cat.name}</span>
+              <span className="font-bold text-app-text">{cat.name}</span>
             </motion.div>
           ))}
         </div>
@@ -79,7 +79,7 @@ export default function Home({ onAddToCart }: { onAddToCart: (p: Product) => voi
       {/* Featured Products */}
       <section className="container mx-auto px-4">
         <div className="flex items-center justify-between mb-8">
-          <h2 className="text-3xl font-black text-slate-900 tracking-tight">En ce moment</h2>
+          <h2 className="text-3xl font-black text-app-text tracking-tight">En ce moment</h2>
           <Link to="/products" className="text-brand-blue font-bold flex items-center gap-2 hover:underline">
             Voir tout
             <ArrowRight className="h-4 w-4" />
@@ -89,7 +89,7 @@ export default function Home({ onAddToCart }: { onAddToCart: (p: Product) => voi
         {loading ? (
           <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
             {[1, 2, 3, 4].map(i => (
-              <div key={i} className="bg-gray-100 animate-pulse rounded-3xl h-80" />
+              <div key={i} className="bg-app-background animate-pulse rounded-3xl h-80" />
             ))}
           </div>
         ) : (
@@ -99,9 +99,9 @@ export default function Home({ onAddToCart }: { onAddToCart: (p: Product) => voi
                 key={product.id}
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
-                className="group bg-white rounded-3xl border border-gray-100 overflow-hidden hover:shadow-xl transition-all duration-300"
+                className="group bg-card-bg rounded-3xl border border-border-subtle overflow-hidden hover:shadow-xl transition-all duration-300"
               >
-                <div className="relative aspect-square overflow-hidden bg-gray-50">
+                <div className="relative aspect-square overflow-hidden bg-app-background">
                   <img 
                     src={product.imageUrl} 
                     alt={product.name}
@@ -117,12 +117,12 @@ export default function Home({ onAddToCart }: { onAddToCart: (p: Product) => voi
                 <div className="p-4 space-y-3">
                   <div className="flex items-center gap-1">
                     <Star className="h-3 w-3 fill-amber-400 text-amber-400" />
-                    <span className="text-xs font-bold text-gray-400">4.9 (120)</span>
+                    <span className="text-xs font-bold text-gray-500">4.9 (120)</span>
                   </div>
-                  <h3 className="font-bold text-gray-900 group-hover:text-brand-blue transition-colors line-clamp-1">{product.name}</h3>
+                  <h3 className="font-bold text-app-text group-hover:text-brand-blue transition-colors line-clamp-1">{product.name}</h3>
                   <div className="flex items-center justify-between">
                     <div className="flex flex-col">
-                      <span className="text-lg font-black text-slate-900">{formatPrice(product.price)}</span>
+                      <span className="text-lg font-black text-app-text">{formatPrice(product.price)}</span>
                       {product.promoPrice && (
                         <span className="text-xs text-gray-400 line-through">{formatPrice(product.promoPrice)}</span>
                       )}
@@ -142,29 +142,29 @@ export default function Home({ onAddToCart }: { onAddToCart: (p: Product) => voi
       </section>
 
       {/* Trust Badges */}
-      <section className="bg-gray-100 py-12">
+      <section className="bg-app-background py-12 border-y border-border-subtle">
         <div className="container mx-auto px-4">
           <div className="grid md:grid-cols-3 gap-8 text-center">
             <div className="space-y-4">
-              <div className="bg-white h-16 w-16 rounded-2xl flex items-center justify-center mx-auto shadow-sm">
+              <div className="bg-card-bg h-16 w-16 rounded-2xl flex items-center justify-center mx-auto shadow-sm border border-border-subtle">
                 <Clock className="h-8 w-8 text-brand-green" />
               </div>
-              <h3 className="font-bold text-lg">Click & Collect Rapide</h3>
-              <p className="text-gray-600">Récupérez votre commande en moins de 2h dans votre magasin CKDO préféré.</p>
+              <h3 className="font-bold text-lg text-app-text">Click & Collect Rapide</h3>
+              <p className="text-gray-500">Récupérez votre commande en moins de 2h dans votre magasin CKDO préféré.</p>
             </div>
             <div className="space-y-4">
-              <div className="bg-white h-16 w-16 rounded-2xl flex items-center justify-center mx-auto shadow-sm">
+              <div className="bg-card-bg h-16 w-16 rounded-2xl flex items-center justify-center mx-auto shadow-sm border border-border-subtle">
                 <ShieldCheck className="h-8 w-8 text-brand-green" />
               </div>
-              <h3 className="font-bold text-lg">Paiement Sécurisé</h3>
-              <p className="text-gray-600">Payez en Mobile Money (Airtel/Moov) ou par Carte Bancaire en toute confiance.</p>
+              <h3 className="font-bold text-lg text-app-text">Paiement Sécurisé</h3>
+              <p className="text-gray-500">Payez en Mobile Money (Airtel/Moov) ou par Carte Bancaire en toute confiance.</p>
             </div>
             <div className="space-y-4">
-              <div className="bg-white h-16 w-16 rounded-2xl flex items-center justify-center mx-auto shadow-sm">
+              <div className="bg-card-bg h-16 w-16 rounded-2xl flex items-center justify-center mx-auto shadow-sm border border-border-subtle">
                 <PhoneCall className="h-8 w-8 text-brand-green" />
               </div>
-              <h3 className="font-bold text-lg">Service Client Local</h3>
-              <p className="text-gray-600">Une équipe dédiée basée au Gabon pour vous accompagner dans vos achats.</p>
+              <h3 className="font-bold text-lg text-app-text">Service Client Local</h3>
+              <p className="text-gray-500">Une équipe dédiée basée au Gabon pour vous accompagner dans vos achats.</p>
             </div>
           </div>
         </div>

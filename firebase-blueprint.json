@@ -10,6 +10,10 @@
         "displayName": { "type": "string" },
         "role": { "type": "string", "enum": ["customer", "admin", "logistics"] },
         "phoneNumber": { "type": "string" },
+        "firstName": { "type": "string" },
+        "lastName": { "type": "string" },
+        "settings": { "type": "object" },
+        "security": { "type": "object" },
         "createdAt": { "type": "string", "format": "date-time" }
       },
       "required": ["uid", "email", "role"]
@@ -75,6 +79,23 @@
         "updatedAt": { "type": "string", "format": "date-time" }
       },
       "required": ["id", "customerId", "storeId", "items", "totalAmount", "status"]
+    },
+    "Invoice": {
+      "title": "Invoice",
+      "description": "Invoice details for a paid order.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "order_id": { "type": "string" },
+        "invoice_number": { "type": "string" },
+        "customer_name": { "type": "string" },
+        "customer_email": { "type": "string" },
+        "total_amount": { "type": "number" },
+        "payment_method": { "type": "string" },
+        "status": { "type": "string" },
+        "created_at": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "order_id", "invoice_number", "total_amount", "status"]
     }
   },
   "firestore": {
@@ -97,6 +118,10 @@
     "/orders/{orderId}": {
       "schema": "Order",
       "description": "Commandes clients"
+    },
+    "/invoices/{invoiceId}": {
+      "schema": "Invoice",
+      "description": "Factures clients"
     }
   }
 }

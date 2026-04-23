@@ -118,7 +118,7 @@ export default function CategoryNav({ onSelectCategory, activeCategory, activeSu
           className={`flex items-center gap-3 px-6 py-4 rounded-2xl font-black text-sm uppercase tracking-wider transition-all border-2 ${
             isOpen 
             ? 'bg-brand-blue border-brand-blue text-white shadow-xl shadow-brand-blue/20' 
-            : 'bg-white border-transparent hover:border-gray-200 text-slate-800 shadow-sm'
+            : 'bg-card-bg border-transparent hover:border-gray-400 text-app-text shadow-sm'
           }`}
         >
           <Menu className="w-5 h-5" />
@@ -154,7 +154,7 @@ export default function CategoryNav({ onSelectCategory, activeCategory, activeSu
       <div className="lg:hidden">
         <button
           onClick={() => setIsMobileMenuOpen(true)}
-          className="flex items-center justify-between w-full bg-white border border-gray-100 p-4 rounded-2xl shadow-sm font-bold text-gray-800"
+          className="flex items-center justify-between w-full bg-card-bg border border-border-subtle p-4 rounded-2xl shadow-sm font-bold text-app-text"
         >
           <div className="flex items-center gap-3">
              <Menu className="w-5 h-5 text-brand-blue" />
@@ -171,10 +171,10 @@ export default function CategoryNav({ onSelectCategory, activeCategory, activeSu
             initial={{ opacity: 0, y: 10, scale: 0.95 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 10, scale: 0.95 }}
-            className="hidden lg:flex absolute top-full left-0 mt-3 w-[700px] bg-white rounded-3xl shadow-2xl border border-gray-100 overflow-hidden"
+            className="hidden lg:flex absolute top-full left-0 mt-3 w-[700px] bg-card-bg rounded-3xl shadow-2xl border border-border-subtle overflow-hidden"
           >
             {/* Categories List (Left) */}
-            <div className="w-1/2 border-r border-gray-50 p-4 space-y-1">
+            <div className="w-1/2 border-r border-border-subtle p-4 space-y-1">
               {CATEGORIES.map((cat) => (
                 <button
                   key={cat.id}
@@ -183,7 +183,7 @@ export default function CategoryNav({ onSelectCategory, activeCategory, activeSu
                   className={`w-full flex items-center justify-between p-4 rounded-xl transition-all ${
                     hoveredCategory === cat.id || activeCategory === cat.name
                     ? 'bg-brand-blue/5 text-brand-blue'
-                    : 'text-gray-600 hover:bg-gray-50'
+                    : 'text-gray-400 hover:bg-app-background hover:text-app-text'
                   }`}
                 >
                   <div className="flex items-center gap-4">
@@ -198,11 +198,11 @@ export default function CategoryNav({ onSelectCategory, activeCategory, activeSu
             </div>
 
             {/* Sub-categories List (Right) */}
-            <div className="w-1/2 bg-gray-50/50 p-8 space-y-6">
+            <div className="w-1/2 bg-app-background p-8 space-y-6">
               {hoveredCategory ? (
                 <>
                   <div className="space-y-1">
-                    <h3 className="text-xl font-black text-slate-800 uppercase tracking-tight">
+                    <h3 className="text-xl font-black text-app-text uppercase tracking-tight">
                       {CATEGORIES.find(c => c.id === hoveredCategory)?.name}
                     </h3>
                     <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">Rayonnages disponibles</p>
@@ -210,7 +210,7 @@ export default function CategoryNav({ onSelectCategory, activeCategory, activeSu
                   <div className="grid gap-2">
                     <button
                       onClick={() => handleSelect(CATEGORIES.find(c => c.id === hoveredCategory)!.name, 'Tous')}
-                      className="text-left py-2 px-4 rounded-lg hover:bg-white hover:text-brand-blue hover:shadow-sm transition-all text-sm font-bold text-gray-600"
+                      className="text-left py-2 px-4 rounded-lg hover:bg-card-bg hover:text-brand-blue hover:shadow-sm transition-all text-sm font-bold text-gray-400"
                     >
                       Voir tout le rayon
                     </button>
@@ -218,8 +218,8 @@ export default function CategoryNav({ onSelectCategory, activeCategory, activeSu
                       <button
                         key={sub}
                         onClick={() => handleSelect(CATEGORIES.find(c => c.id === hoveredCategory)!.name, sub)}
-                        className={`text-left py-2 px-4 rounded-lg hover:bg-white hover:text-brand-blue hover:shadow-sm transition-all text-sm font-bold ${
-                          activeSubCategory === sub ? 'bg-white text-brand-blue shadow-sm' : 'text-gray-600'
+                        className={`text-left py-2 px-4 rounded-lg hover:bg-card-bg hover:text-brand-blue hover:shadow-sm transition-all text-sm font-bold ${
+                          activeSubCategory === sub ? 'bg-card-bg text-brand-blue shadow-sm' : 'text-gray-400'
                         }`}
                       >
                         {sub}
@@ -229,10 +229,10 @@ export default function CategoryNav({ onSelectCategory, activeCategory, activeSu
                 </>
               ) : (
                 <div className="h-full flex flex-col items-center justify-center text-center space-y-4">
-                  <div className="p-4 bg-white rounded-full shadow-sm text-brand-blue border border-gray-100">
+                  <div className="p-4 bg-card-bg rounded-full shadow-sm text-brand-blue border border-border-subtle">
                     <Archive className="w-8 h-8" />
                   </div>
-                  <p className="text-gray-400 font-medium text-sm">Survolez un rayon pour voir les détails</p>
+                  <p className="text-gray-500 font-medium text-sm">Survolez un rayon pour voir les détails</p>
                 </div>
               )}
             </div>
@@ -256,16 +256,16 @@ export default function CategoryNav({ onSelectCategory, activeCategory, activeSu
               animate={{ x: 0 }}
               exit={{ x: '100%' }}
               transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-              className="fixed inset-y-0 right-0 w-[85%] max-w-sm bg-white z-[101] shadow-2xl flex flex-col"
+              className="fixed inset-y-0 right-0 w-[85%] max-w-sm bg-card-bg z-[101] shadow-2xl flex flex-col"
             >
-              <div className="p-6 border-b border-gray-100 flex items-center justify-between">
+              <div className="p-6 border-b border-border-subtle flex items-center justify-between">
                 <div className="space-y-1">
-                  <h2 className="text-xl font-black text-slate-900 uppercase">Nos Rayons</h2>
+                  <h2 className="text-xl font-black text-app-text uppercase">Nos Rayons</h2>
                   <p className="text-xs text-gray-400 font-bold uppercase tracking-wider">Naviguer au magasin</p>
                 </div>
                 <button 
                   onClick={() => setIsMobileMenuOpen(false)}
-                  className="p-2 bg-gray-50 rounded-xl text-gray-500 hover:text-brand-red transition-colors"
+                  className="p-2 bg-app-background rounded-xl text-gray-500 hover:text-brand-red transition-colors"
                 >
                   <X className="w-6 h-6" />
                 </button>
@@ -281,7 +281,7 @@ export default function CategoryNav({ onSelectCategory, activeCategory, activeSu
                       <div className="p-3 bg-brand-blue/5 rounded-xl text-brand-blue group-hover:bg-brand-blue group-hover:text-white transition-all">
                         {cat.icon}
                       </div>
-                      <span className="font-extrabold text-gray-900 group-hover:text-brand-blue transition-colors uppercase tracking-tight">
+                      <span className="font-extrabold text-app-text group-hover:text-brand-blue transition-colors uppercase tracking-tight">
                         {cat.name}
                       </span>
                     </button>
@@ -302,7 +302,7 @@ export default function CategoryNav({ onSelectCategory, activeCategory, activeSu
                 ))}
               </div>
 
-              <div className="p-6 bg-gray-50 border-t border-gray-100">
+              <div className="p-6 bg-app-background border-t border-border-subtle">
                 <button 
                   onClick={() => handleSelect('Tous')}
                   className="w-full btn-primary py-4 rounded-2xl flex items-center justify-center gap-2"
