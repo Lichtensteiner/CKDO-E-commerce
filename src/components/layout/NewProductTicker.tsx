@@ -11,9 +11,16 @@ export default function NewProductTicker({ products }: { products: Product[] }) 
   // Filter products added in the last 48 hours
   const newProducts = products.filter(p => {
     if (!p.createdAt) return false;
-    const createdAt = p.createdAt instanceof Date ? p.createdAt : new Date(p.createdAt);
+    let date: Date;
+    if (p.createdAt?.toDate) {
+      date = p.createdAt.toDate();
+    } else if (p.createdAt?.seconds) {
+      date = new Date(p.createdAt.seconds * 1000);
+    } else {
+      date = new Date(p.createdAt);
+    }
     const fortyEightHoursAgo = new Date(Date.now() - 48 * 60 * 60 * 1000);
-    return createdAt > fortyEightHoursAgo;
+    return date > fortyEightHoursAgo;
   });
 
   if (!isVisible || newProducts.length === 0) return null;

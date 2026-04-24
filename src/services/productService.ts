@@ -2,7 +2,6 @@ import {
   collection, 
   onSnapshot, 
   query, 
-  orderBy, 
   addDoc, 
   updateDoc, 
   deleteDoc, 
@@ -13,28 +12,33 @@ import { db } from '../lib/firebase';
 import { Product } from '../types';
 
 export const productService = {
-  // Listen to all active products for the client side
+  // Listen to all products for the client side
   subscribeToActiveProducts: (callback: (products: Product[]) => void, onError?: (error: any) => void) => {
-    // Listen directly to 'products' collection
+    console.log("[productService] Attaching real-time listener to 'products' collection...");
     const q = query(collection(db, 'products'));
     
     return onSnapshot(q, (snapshot) => {
+      console.log(`[productService] Update: ${snapshot.size} products found in Firestore.`);
       const products = snapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
       })) as unknown as Product[];
       
-      // Sort manually in JS as a safer fallback (newest first)
-      const sortedProducts = products.sort((a: any, b: any) => {
-        const dateA = a.createdAt?.seconds || (a.createdAt ? new Date(a.createdAt).getTime() / 1000 : 0);
-        const dateB = b.createdAt?.seconds || (b.createdAt ? new Date(b.createdAt).getTime() / 1000 : 0);
-        return dateB - dateA;
+      // Manual sort newest first
+      const sorted = products.sort((a: any, b: any) => {
+        const getVal = (p: any) => {
+          if (!p.createdAt) return 0;
+          if (p.createdAt?.seconds) return p.createdAt.seconds;
+          if (typeof p.createdAt?.toDate === 'function') return p.createdAt.toDate().getTime() / 1000;
+          return new Date(p.createdAt).getTime() / 1000;
+        };
+        return getVal(b) - getVal(a);
       });
       
-      callback(sortedProducts);
+      callback(sorted);
     }, (error) => {
+      console.error("[productService] Firestore Listener Error:", error);
       if (onError) onError(error);
-      else console.error("Snapshot error:", error);
     });
   },
 

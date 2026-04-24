@@ -16,8 +16,9 @@ export default function ProductList({ onAddToCart }: { onAddToCart: (p: Product)
 
   useEffect(() => {
     const unsub = productService.subscribeToActiveProducts((fetched) => {
-      // Show products if they are explicitly active OR if the isActive field is missing
-      setProducts(fetched.filter(p => p.isActive !== false));
+      console.log(`[ProductList] Fetched ${fetched.length} products total.`);
+      // Show all products to debug visibility issues
+      setProducts(fetched);
       setLoadingProducts(false);
     });
     return () => unsub();

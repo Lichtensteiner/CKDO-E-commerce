@@ -14,7 +14,8 @@ export default function Home({ onAddToCart }: { onAddToCart: (p: Product) => voi
 
   useEffect(() => {
     const unsub = productService.subscribeToActiveProducts((fetched) => {
-      setProducts(fetched.filter(p => p.isActive !== false).slice(0, 4));
+      console.log(`[Home] Total products fetched from Firestore: ${fetched.length}`);
+      setProducts(fetched.slice(0, 50));
       setLoading(false);
     });
     return () => unsub();
@@ -126,8 +127,8 @@ export default function Home({ onAddToCart }: { onAddToCart: (p: Product) => voi
               <div key={i} className="bg-app-background animate-pulse rounded-3xl h-80" />
             ))}
           </div>
-        ) : (
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+        ) : products.length > 0 ? (
+          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-6">
             {products.map((product) => (
               <motion.div
                 key={product.id}
@@ -171,6 +172,12 @@ export default function Home({ onAddToCart }: { onAddToCart: (p: Product) => voi
                 </div>
               </motion.div>
             ))}
+          </div>
+        ) : (
+          <div className="py-20 text-center bg-card-bg rounded-[3rem] border border-dashed border-border-subtle">
+            <ShoppingBag className="mx-auto h-12 w-12 text-gray-300 mb-4" />
+            <h3 className="text-xl font-bold text-app-text">Aucun produit disponible</h3>
+            <p className="text-gray-500">Revenez bientôt pour découvrir nos nouveautés !</p>
           </div>
         )}
       </section>
