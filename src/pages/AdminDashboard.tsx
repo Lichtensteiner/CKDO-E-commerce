@@ -34,6 +34,7 @@ import {
   Clock,
   LogOut,
   X,
+  Menu,
   AlertCircle,
   ShieldCheck,
   Moon,
@@ -1146,30 +1147,29 @@ function SettingsTab({ user }: any) {
   const [seeding, setSeeding] = useState(false);
   const [migrating, setMigrating] = useState(false);
 
-  const migrateProducts = async () => {
+  const migrateProductsFromProduitsToProducts = async () => {
     setMigrating(true);
     try {
-      console.log('Début de la migration de "products" vers "produits"...');
-      const snap = await getDocs(collection(db, 'products'));
+      console.log('Début de la migration de "produits" vers "products"...');
+      const snap = await getDocs(collection(db, 'produits'));
       console.log(`Nombre de produits trouvés dans l'ancienne collection: ${snap.size}`);
       
       if (snap.empty) {
-        alert("Aucun produit trouvé dans l'ancienne collection 'products'. Essayez d'importer la démo si vous n'avez pas de données.");
+        alert("Aucun produit trouvé dans l'ancienne collection 'produits'.");
         return;
       }
       
       let count = 0;
       for (const d of snap.docs) {
         const data = d.data();
-        // Ensure we have a timestamp for ordering
         if (!data.createdAt) {
           data.createdAt = serverTimestamp();
         }
-        await setDoc(doc(db, 'produits', d.id), data);
+        await setDoc(doc(db, 'products', d.id), data);
         console.log(`Migré: ${d.id}`);
         count++;
       }
-      alert(`${count} produits migrés avec succès vers la nouvelle collection 'produits' !`);
+      alert(`${count} produits migrés avec succès vers la nouvelle collection 'products' !`);
     } catch (err) {
       console.error(err);
       alert('Erreur de migration : ' + (err as Error).message);
@@ -1182,7 +1182,7 @@ function SettingsTab({ user }: any) {
     setSeeding(true);
     try {
       for (const product of MOCK_PRODUCTS) {
-        await addDoc(collection(db, 'produits'), {
+        await addDoc(collection(db, 'products'), {
           ...product,
           isActive: true,
           stock: 100,
@@ -1302,11 +1302,11 @@ function SettingsTab({ user }: any) {
           </h3>
           <div className="space-y-4">
             <button 
-              onClick={migrateProducts}
+              onClick={migrateProductsFromProduitsToProducts}
               disabled={migrating}
               className="w-full py-4 bg-brand-blue text-white font-bold rounded-2xl hover:bg-brand-blue/90 transition-all disabled:opacity-50 text-sm shadow-lg shadow-brand-blue/20"
             >
-              {migrating ? 'Migration en cours...' : '1. Migrer les anciens produits'}
+              {migrating ? 'Migration en cours...' : '1. Migrer de "produits" vers "products"'}
             </button>
             <p className="text-[10px] text-gray-400 text-center px-4">Utilisez ce bouton si vos produits ne s'affichent plus suite au changement de langue.</p>
             

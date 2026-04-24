@@ -63,7 +63,7 @@ export default function ProductDetail({
       window.scrollTo(0, 0);
       try {
         // Try Firestore first
-        const docRef = doc(db, 'produits', id || '');
+        const docRef = doc(db, 'products', id || '');
         const docSnap = await getDoc(docRef);
 
         let currentProduct = null;
@@ -78,7 +78,7 @@ export default function ProductDetail({
           setProduct(currentProduct);
           // Fetch related
           const q = query(
-            collection(db, 'produits'), 
+            collection(db, 'products'), 
             where('category', '==', currentProduct.category)
           );
           const relatedSnap = await getDocs(q);

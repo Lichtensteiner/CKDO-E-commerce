@@ -17,7 +17,7 @@ export const productService = {
   subscribeToActiveProducts: (callback: (products: Product[]) => void, onError?: (error: any) => void) => {
     // We'll try to order by createdAt, but we'll provide a fallback in case some docs lack it
     const q = query(
-      collection(db, 'produits')
+      collection(db, 'products')
       // Removed mandatory orderBy here to avoid hidden failures if index/field is missing
     );
     
@@ -43,7 +43,7 @@ export const productService = {
 
   // Admin: Add a new product
   addProduct: async (productData: Omit<Product, 'id'>) => {
-    return await addDoc(collection(db, 'produits'), {
+    return await addDoc(collection(db, 'products'), {
       ...productData,
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp()
@@ -52,7 +52,7 @@ export const productService = {
 
   // Admin: Update a product
   updateProduct: async (id: string, updates: Partial<Product>) => {
-    const productRef = doc(db, 'produits', id);
+    const productRef = doc(db, 'products', id);
     return await updateDoc(productRef, {
       ...updates,
       updatedAt: serverTimestamp()
@@ -61,6 +61,22 @@ export const productService = {
 
   // Admin: Delete a product
   deleteProduct: async (id: string) => {
-    return await deleteDoc(doc(db, 'produits', id));
+    return await deleteDoc(doc(db, 'products', id));
+  },
+
+  // Migration Utility
+  migrateProduitsToProducts: async () => {
+    const { getDocs } = await import('firebase/firestore');
+    const oldSnap = await getDocs(collection(db, 'produits'));
+    console.log(`Starting migration of ${oldSnap.size} products from 'produits' to 'products'...`);
+    
+    for (const d of oldSnap.docs) {
+      const productRef = doc(db, 'products', d.id);
+      const { setDoc } = await import('firebase/firestore');
+      await setDoc(productRef, d.data());
+      console.log(`Migrated doc: ${d.id}`);
+    }
+    
+    console.log("Migration complete!");
   }
 };
