@@ -30,18 +30,31 @@ export default function InvoiceModal({ isOpen, onClose, order, customer }: Invoi
         scale: 2,
         useCORS: true,
         backgroundColor: '#ffffff',
-        logging: true,
+        logging: false,
         onclone: (clonedDoc) => {
-          // Additional fix: explicitly force some standard colors to hex in the cloned document
-          // if they are still oklch for some reason
           const elements = clonedDoc.querySelectorAll('*');
           elements.forEach((el) => {
+            const castEl = el as HTMLElement;
             const style = window.getComputedStyle(el);
-            if (style.color && style.color.includes('oklch')) {
-              (el as HTMLElement).style.color = 'inherit';
+            
+            // html2canvas struggles with oklch/oklab even in styles.
+            // Force common problematic styles to standard values
+            if (style.color.includes('okl') || style.color.includes('var')) {
+              castEl.style.color = '#1e293b'; // Default text color
             }
-            if (style.backgroundColor && style.backgroundColor.includes('oklch')) {
-              (el as HTMLElement).style.backgroundColor = 'transparent';
+            if (style.backgroundColor.includes('okl') || style.backgroundColor.includes('var')) {
+              // If it's the blue header, use blue hex
+              if (castEl.classList.contains('bg-brand-blue')) {
+                castEl.style.backgroundColor = '#0D52D6';
+              } else if (castEl.classList.contains('bg-slate-900')) {
+                castEl.style.backgroundColor = '#0f172a';
+              } else if (castEl.classList.contains('bg-gray-50')) {
+                castEl.style.backgroundColor = '#f9fafb';
+              } else {
+                // Keep the computed bg if it's not oklch, otherwise fallback
+                const bg = style.backgroundColor;
+                if (bg.includes('okl')) castEl.style.backgroundColor = 'transparent';
+              }
             }
           });
         }
@@ -192,7 +205,7 @@ export default function InvoiceModal({ isOpen, onClose, order, customer }: Invoi
                   <div className="space-y-3 p-6 border border-gray-100 rounded-3xl">
                     <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Détails du paiement</p>
                     <div className="space-y-1 text-right md:text-left">
-                      <p className="text-sm font-bold text-slate-900">Mode: <span className="text-brand-blue uppercase">{order.paymentMethod === 'momov' ? 'Airtel Money / Moov Money' : 'Paiement à la livraison'}</span></p>
+                      <p className="text-sm font-bold text-slate-900">Mode: <span className="text-brand-blue uppercase">{order.paymentMethod === 'mobile_money' ? 'Airtel Money / Moov Money' : order.paymentMethod === 'card' ? 'Carte Bancaire' : 'Paiement en magasin'}</span></p>
                       <p className="text-sm font-bold text-slate-900">Statut: <span className={`uppercase ${order.status === 'paid' ? 'text-green-500' : 'text-amber-500'}`}>{order.status === 'paid' ? 'Payée' : 'En attente'}</span></p>
                     </div>
                   </div>
@@ -214,7 +227,6 @@ export default function InvoiceModal({ isOpen, onClose, order, customer }: Invoi
                         <tr key={idx}>
                           <td className="py-6">
                             <p className="font-bold text-slate-900">{item.name}</p>
-                            <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">{item.category}</p>
                           </td>
                           <td className="py-6 px-4 text-center font-bold text-slate-900">{item.quantity}</td>
                           <td className="py-6 px-4 text-right font-medium text-slate-600">{formatPrice(item.price)}</td>

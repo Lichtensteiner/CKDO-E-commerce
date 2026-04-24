@@ -91,10 +91,30 @@ export default function AdminDashboard({ user }: { user: UserProfile | null }) {
     totalProducts: 0,
     totalCustomers: 0,
     activeProducts: 0,
-    pendingOrders: 0
+    pendingOrders: 0,
+    expiringSoon: {
+      total: 0,
+      critical: 0, // 5 days (Red)
+      warning: 0,  // 2 weeks (Yellow)
+      info: 0      // 1 month (Orange)
+    }
   });
 
-  // Real-time Monthly Sales Data (2020-2030)
+  // Expiry Logic: Returns 'red' | 'yellow' | 'orange' | 'none'
+  const getExpiryStatus = (date?: string) => {
+    if (!date) return 'none';
+    const expiry = new Date(date);
+    const now = new Date();
+    const diffTime = expiry.getTime() - now.getTime();
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+    if (diffDays <= 5) return 'red';
+    if (diffDays <= 14) return 'yellow';
+    if (diffDays <= 30) return 'orange';
+    return 'none';
+  };
+
+  // Real-time Monthly Sales Data
   const getSalesData = () => {
     const monthlySales: Record<string, number> = {};
     
@@ -121,6 +141,20 @@ export default function AdminDashboard({ user }: { user: UserProfile | null }) {
 
   const chartData = getSalesData();
 
+  const getStockOverview = () => {
+    const categories: Record<string, { name: string, stock: number, products: number }> = {};
+    products.forEach(p => {
+      if (!categories[p.category]) {
+        categories[p.category] = { name: p.category, stock: 0, products: 0 };
+      }
+      categories[p.category].stock += p.stock;
+      categories[p.category].products += 1;
+    });
+    return Object.values(categories);
+  };
+
+  const stockData = getStockOverview();
+
   useEffect(() => {
     let initialLoad = true;
     // Orders listener
@@ -144,10 +178,21 @@ export default function AdminDashboard({ user }: { user: UserProfile | null }) {
     const unsubProducts = productService.subscribeToActiveProducts((productsData) => {
       setProducts(productsData);
       const active = productsData.filter(p => p.isActive).length;
+      
+      const expiry = { critical: 0, warning: 0, info: 0, total: 0 };
+      productsData.forEach(p => {
+        const status = getExpiryStatus(p.expiryDate);
+        if (status === 'red') expiry.critical++;
+        if (status === 'yellow') expiry.warning++;
+        if (status === 'orange') expiry.info++;
+        if (status !== 'none') expiry.total++;
+      });
+
       setStats(prev => ({ 
         ...prev, 
         totalProducts: productsData.length,
-        activeProducts: active
+        activeProducts: active,
+        expiringSoon: expiry
       }));
     });
 
@@ -266,8 +311,8 @@ export default function AdminDashboard({ user }: { user: UserProfile | null }) {
         </header>
 
         <div className="p-4 md:p-8">
-          {activeTab === 'overview' && <OverviewTab stats={stats} chartData={chartData} orders={orders} onOpenInvoice={openInvoice} />}
-          {activeTab === 'products' && <ProductsTab products={products} />}
+          {activeTab === 'overview' && <OverviewTab stats={stats} chartData={chartData} stockData={stockData} orders={orders} onOpenInvoice={openInvoice} />}
+          {activeTab === 'products' && <ProductsTab products={products} getExpiryStatus={getExpiryStatus} />}
           {activeTab === 'orders' && <OrdersTab orders={orders} onOpenInvoice={openInvoice} />}
           {activeTab === 'customers' && <CustomersTab customers={customers} />}
           {activeTab === 'settings' && <SettingsTab user={user} />}
@@ -330,7 +375,7 @@ function StatCard({ label, value, icon, trend, color }: any) {
 
 // --- TABS ---
 
-function OverviewTab({ stats, chartData, orders, onOpenInvoice }: any) {
+function OverviewTab({ stats, chartData, stockData, orders, onOpenInvoice }: any) {
   const { theme } = useTheme();
   const recentOrders = [...orders].sort((a, b) => {
     const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
@@ -340,6 +385,7 @@ function OverviewTab({ stats, chartData, orders, onOpenInvoice }: any) {
 
   return (
     <div className="space-y-8">
+      {/* Top Stats */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
         <StatCard 
           label="Chiffre d'affaires" 
@@ -367,22 +413,82 @@ function OverviewTab({ stats, chartData, orders, onOpenInvoice }: any) {
         />
       </div>
 
+      {/* Alerts Section - Expiry and Stock */}
+      <div className="grid md:grid-cols-3 gap-6">
+        <div className={`col-span-3 lg:col-span-1 p-6 rounded-3xl border border-border-subtle shadow-sm ${stats.expiringSoon.critical > 0 ? 'bg-red-50 border-red-200' : 'bg-card-bg'}`}>
+          <div className="flex items-center gap-3 mb-6">
+             <div className="p-3 bg-red-100 text-red-600 rounded-2xl">
+                <AlertCircle size={24} />
+             </div>
+             <div>
+                <h3 className="font-black text-app-text">Alertes Péremption</h3>
+                <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Surveillance stocks sensibles</p>
+             </div>
+          </div>
+          <div className="space-y-4">
+             <ExpiryAlertItem color="bg-red-500" label="Urgent (5 jours)" count={stats.expiringSoon.critical} textColor="text-red-600" />
+             <ExpiryAlertItem color="bg-yellow-500" label="Limite (2 semaines)" count={stats.expiringSoon.warning} textColor="text-yellow-600" />
+             <ExpiryAlertItem color="bg-orange-500" label="Proche (1 mois)" count={stats.expiringSoon.info} textColor="text-orange-600" />
+          </div>
+          {stats.expiringSoon.total > 0 && (
+             <button className="w-full mt-6 py-3 bg-slate-900 text-white text-xs font-black uppercase tracking-widest rounded-xl shadow-lg hover:bg-slate-800 transition-all">
+                Lancer des promotions flash
+             </button>
+          )}
+        </div>
+
+        <div className="col-span-3 lg:col-span-2 bg-card-bg p-8 rounded-3xl border border-border-subtle shadow-sm">
+           <div className="flex justify-between items-center mb-6">
+              <h3 className="font-black text-app-text text-xl">Flux des Stocks par Rayon</h3>
+              <div className="flex gap-4">
+                 <div className="flex items-center gap-2">
+                    <div className="w-3 h-3 rounded-full bg-brand-blue" />
+                    <span className="text-[10px] font-bold text-gray-400">Total Produits</span>
+                 </div>
+                 <div className="flex items-center gap-2">
+                    <div className="w-3 h-3 rounded-full bg-emerald-500" />
+                    <span className="text-[10px] font-bold text-gray-400">Quantité Stock</span>
+                 </div>
+              </div>
+           </div>
+           <div className="h-[250px] w-full">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={stockData}>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={theme === 'dark' ? '#334155' : '#F1F5F9'} />
+                  <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill: '#94A3B8', fontSize: 9}} dy={10} />
+                  <YAxis axisLine={false} tickLine={false} tick={{fill: '#94A3B8', fontSize: 10}} />
+                  <Tooltip 
+                    cursor={{fill: theme === 'dark' ? '#1e293b' : '#F8FAFC'}}
+                    contentStyle={{borderRadius: '16px', border: 'none', boxShadow: '0 10px 15px -1px rgba(0,0,0,0.1)'}}
+                  />
+                  <Bar dataKey="products" name="Nb Produits" fill="#0D52D6" radius={[4, 4, 0, 0]} barSize={30} />
+                  <Bar dataKey="stock" name="Volume Stock" fill="#10B981" radius={[4, 4, 0, 0]} barSize={30} />
+                </BarChart>
+              </ResponsiveContainer>
+           </div>
+        </div>
+      </div>
+
+      {/* Sales Evolution and Recent Activity */}
       <div className="grid lg:grid-cols-3 gap-8">
         <div className="lg:col-span-2 bg-card-bg p-8 rounded-3xl border border-border-subtle shadow-sm">
           <div className="mb-6 flex justify-between items-center">
-            <h3 className="font-black text-app-text text-xl">Ventes mensuelles (2020-2030)</h3>
-            <span className="bg-app-background text-brand-blue text-[10px] font-black uppercase px-3 py-1 rounded-full">Temps Réel</span>
+            <h3 className="font-black text-app-text text-xl">Courbe d'évolution des ventes</h3>
+            <div className="p-2 bg-emerald-50 rounded-lg text-emerald-600 flex items-center gap-2">
+               <TrendingUp size={14} />
+               <span className="text-[10px] font-black uppercase tracking-tighter">Performance Positive</span>
+            </div>
           </div>
           <div className="h-[300px] w-full">
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={chartData}>
                 <defs>
                   <linearGradient id="colorSales" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#0D52D6" stopOpacity={0.1}/>
+                    <stop offset="5%" stopColor="#0D52D6" stopOpacity={0.2}/>
                     <stop offset="95%" stopColor="#0D52D6" stopOpacity={0}/>
                   </linearGradient>
                 </defs>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={theme === 'dark' ? '#334155' : '#E2E8F0'} />
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={theme === 'dark' ? '#334155' : '#F1F5F9'} />
                 <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{fill: '#94A3B8', fontSize: 10}} dy={10} />
                 <YAxis axisLine={false} tickLine={false} tick={{fill: '#94A3B8', fontSize: 10}} tickFormatter={(val) => `${val/1000}k`} />
                 <Tooltip 
@@ -394,34 +500,39 @@ function OverviewTab({ stats, chartData, orders, onOpenInvoice }: any) {
                     color: theme === 'dark' ? '#fff' : '#000'
                   }}
                 />
-                <Area type="monotone" dataKey="total" name="Ventes" stroke="#0D52D6" strokeWidth={3} fillOpacity={1} fill="url(#colorSales)" />
+                <Area type="monotone" dataKey="total" name="CA Direct" stroke="#0D52D6" strokeWidth={4} fillOpacity={1} fill="url(#colorSales)" />
               </AreaChart>
             </ResponsiveContainer>
           </div>
         </div>
 
         <div className="bg-card-bg p-8 rounded-3xl border border-border-subtle shadow-sm flex flex-col">
-          <h3 className="font-black text-app-text text-xl mb-6">Activité récente</h3>
+          <h3 className="font-black text-app-text text-xl mb-6">Transactions Récentes</h3>
           <div className="space-y-6 flex-1">
             {recentOrders.length === 0 && (
               <div className="text-center py-10 opacity-30">
-                <p className="text-xs font-bold">Aucune commande enregistrée</p>
+                <p className="text-xs font-bold">Aucune transaction enregistrée</p>
               </div>
             )}
             {recentOrders.map((order: any) => (
               <div key={order.id} className="flex gap-4 group cursor-pointer" onClick={() => onOpenInvoice(order)}>
-                <div className={`w-2 h-2 rounded-full mt-2 shrink-0 ${
-                  order.status === 'paid' ? 'bg-blue-500' : 'bg-yellow-500'
-                }`} />
-                <div>
-                  <p className="text-sm font-bold text-app-text group-hover:text-brand-blue transition-colors">Cmd #{order.id.slice(-6)} - {formatPrice(order.totalAmount)}</p>
+                <div className={`p-3 rounded-2xl shrink-0 ${
+                  order.status === 'paid' ? 'bg-emerald-50 text-emerald-600' : 'bg-amber-50 text-amber-600'
+                }`}>
+                  <CreditCard size={20} />
+                </div>
+                <div className="flex-1">
+                  <div className="flex justify-between items-start">
+                    <p className="text-sm font-bold text-app-text group-hover:text-brand-blue transition-colors">#{order.id.slice(-6)}</p>
+                    <span className="text-sm font-black text-app-text">{formatPrice(order.totalAmount)}</span>
+                  </div>
                   <p className="text-[10px] font-bold text-gray-400 capitalize">{new Date(order.createdAt).toLocaleString('fr-FR', { month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</p>
                 </div>
               </div>
             ))}
           </div>
-          <button className="w-full py-3 text-sm font-bold text-brand-blue border-t border-border-subtle mt-4">
-            Voir tout l'historique
+          <button className="w-full py-4 bg-app-background text-gray-400 text-[10px] font-black uppercase tracking-[0.2em] rounded-2xl mt-6 hover:text-brand-blue hover:bg-brand-blue/5 transition-all">
+            Historique Complet des flux
           </button>
         </div>
       </div>
@@ -429,7 +540,19 @@ function OverviewTab({ stats, chartData, orders, onOpenInvoice }: any) {
   );
 }
 
-function ProductsTab({ products }: any) {
+function ExpiryAlertItem({ color, label, count, textColor }: any) {
+  return (
+    <div className="flex items-center justify-between p-4 bg-app-background rounded-2xl border border-border-subtle/50">
+       <div className="flex items-center gap-3">
+          <div className={`w-3 h-3 rounded-full ${color} animate-pulse`} />
+          <span className="text-sm font-bold text-app-text">{label}</span>
+       </div>
+       <span className={`text-lg font-black ${textColor}`}>{count}</span>
+    </div>
+  );
+}
+
+function ProductsTab({ products, getExpiryStatus }: any) {
   const [showModal, setShowModal] = useState(false);
   const [editingProduct, setEditingProduct] = useState<any>(null);
   const [loading, setLoading] = useState(false);
@@ -442,9 +565,37 @@ function ProductsTab({ products }: any) {
     subCategory: 'Riz & céréales',
     imageUrl: '',
     stock: 0,
+    expiryDate: '',
     description: '',
-    isActive: true
+    isActive: true,
+    isPromo: false,
+    promoPrice: 0
   });
+
+  const resetForm = () => {
+    setEditingProduct(null);
+    setFormData({ 
+      name: '', 
+      price: 0, 
+      category: 'Produits alimentaires', 
+      subCategory: 'Riz & céréales',
+      imageUrl: '', 
+      stock: 0, 
+      expiryDate: '',
+      description: '', 
+      isActive: true,
+      isPromo: false,
+      promoPrice: 0
+    });
+    setImagePreview(null);
+  };
+
+  const statusColors = {
+    red: 'bg-red-500 text-white',
+    yellow: 'bg-yellow-400 text-slate-900',
+    orange: 'bg-orange-500 text-white',
+    none: 'bg-gray-100 text-gray-400'
+  } as any;
 
   const categoryMap: Record<string, string[]> = {
     'Produits alimentaires': ['Riz & céréales', 'Pâtes', 'Conserves', 'Condiments'],
@@ -490,7 +641,6 @@ function ProductsTab({ products }: any) {
     setLoading(true);
     try {
       if (editingProduct) {
-        // Clean up formData to remove the id before updating
         const { id, ...updates } = formData as any;
         await productService.updateProduct(editingProduct.id, updates);
       } else {
@@ -506,21 +656,6 @@ function ProductsTab({ products }: any) {
     }
   };
 
-  const resetForm = () => {
-    setEditingProduct(null);
-    setFormData({ 
-      name: '', 
-      price: 0, 
-      category: 'Produits alimentaires', 
-      subCategory: 'Riz & céréales',
-      imageUrl: '', 
-      stock: 0, 
-      description: '', 
-      isActive: true 
-    });
-    setImagePreview(null);
-  };
-
   const handleDelete = async (id: string) => {
     if (window.confirm('Supprimer ce produit ?')) {
       await productService.deleteProduct(id);
@@ -530,68 +665,87 @@ function ProductsTab({ products }: any) {
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <h3 className="text-2xl font-black text-app-text">Catalogue</h3>
+        <h3 className="text-2xl font-black text-app-text tracking-tighter">Gestion du Catalogue</h3>
         <button 
-          onClick={() => { setEditingProduct(null); setShowModal(true); }}
-          className="btn-primary px-6 py-3 rounded-2xl flex items-center gap-2 font-bold shadow-lg shadow-brand-blue/20"
+          onClick={() => { resetForm(); setShowModal(true); }}
+          className="btn-primary px-8 py-4 rounded-[2rem] flex items-center gap-2 font-black uppercase text-[10px] tracking-widest shadow-xl shadow-brand-blue/20"
         >
-          <Plus className="h-5 w-5" /> Ajouter un produit
+          <Plus className="h-5 w-5" /> Nouveau Produit
         </button>
       </div>
 
-      <div className="bg-card-bg rounded-3xl border border-border-subtle shadow-sm overflow-hidden">
+      <div className="bg-card-bg rounded-[2.5rem] border border-border-subtle shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left">
             <thead>
               <tr className="bg-app-background border-b border-border-subtle">
-                <th className="px-6 py-4 text-xs font-black uppercase text-gray-400">Produit</th>
-                <th className="px-6 py-4 text-xs font-black uppercase text-gray-400">Catégorie</th>
-                <th className="px-6 py-4 text-xs font-black uppercase text-gray-400">Prix</th>
-                <th className="px-6 py-4 text-xs font-black uppercase text-gray-400">Stock</th>
-                <th className="px-6 py-4 text-xs font-black uppercase text-gray-400 text-center">Actions</th>
+                <th className="px-6 py-5 text-[10px] font-black uppercase text-gray-400 tracking-widest">Produit</th>
+                <th className="px-6 py-5 text-[10px] font-black uppercase text-gray-400 tracking-widest">Catégorie</th>
+                <th className="px-6 py-5 text-[10px] font-black uppercase text-gray-400 tracking-widest">Prix</th>
+                <th className="px-6 py-5 text-[10px] font-black uppercase text-gray-400 tracking-widest">Stock</th>
+                <th className="px-6 py-5 text-[10px] font-black uppercase text-gray-400 tracking-widest">Péremption</th>
+                <th className="px-6 py-5 text-[10px] font-black uppercase text-gray-400 text-center tracking-widest">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border-subtle">
-              {products.map((p: any) => (
-                <tr key={p.id} className="hover:bg-app-background transition-colors">
-                  <td className="px-6 py-4">
-                    <div className="flex items-center gap-4">
-                      <img src={p.imageUrl} alt={p.name} className="w-12 h-12 rounded-xl object-cover" />
-                      <div>
-                        <p className="font-bold text-app-text">{p.name}</p>
-                        <p className={`text-[10px] font-black uppercase ${p.isActive ? 'text-green-500' : 'text-red-500'}`}>
-                          {p.isActive ? 'Actif' : 'Inactif'}
-                        </p>
+              {products.map((p: any) => {
+                const expiryStatus = getExpiryStatus(p.expiryDate);
+                return (
+                  <tr key={p.id} className="hover:bg-app-background transition-colors group">
+                    <td className="px-6 py-5">
+                      <div className="flex items-center gap-4">
+                        <img src={p.imageUrl} alt={p.name} className="w-14 h-14 rounded-2xl object-cover shadow-sm group-hover:scale-105 transition-transform" />
+                        <div>
+                          <p className="font-black text-app-text tracking-tight uppercase text-sm">{p.name}</p>
+                          <p className={`text-[9px] font-black uppercase tracking-widest ${p.isActive ? 'text-emerald-500' : 'text-red-500'}`}>
+                            {p.isActive ? 'Actif' : 'Masqué'}
+                          </p>
+                        </div>
                       </div>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4">
-                    <span className="text-sm font-medium text-gray-500">{p.category}</span>
-                  </td>
-                  <td className="px-6 py-4">
-                    <span className="font-black text-brand-blue">{formatPrice(p.price)}</span>
-                  </td>
-                  <td className="px-6 py-4">
-                    <span className={`text-sm font-bold ${p.stock < 10 ? 'text-red-500' : 'text-app-text'}`}>{p.stock}</span>
-                  </td>
-                  <td className="px-6 py-4">
-                    <div className="flex justify-center gap-2">
-                      <button 
-                        onClick={() => { setEditingProduct(p); setFormData(p); setShowModal(true); }}
-                        className="p-2 text-blue-500 hover:bg-blue-50 rounded-lg transition-colors"
-                      >
-                        <Edit2 className="h-4 w-4" />
-                      </button>
-                      <button 
-                        onClick={() => handleDelete(p.id)}
-                        className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
+                    </td>
+                    <td className="px-6 py-5">
+                      <span className="text-[10px] font-black uppercase tracking-widest text-gray-400">{p.category}</span>
+                    </td>
+                    <td className="px-6 py-5">
+                      <div className="flex flex-col">
+                        <span className="font-black text-brand-blue">{formatPrice(p.price)}</span>
+                        {p.isPromo && <span className="text-[10px] text-brand-red font-black line-through opacity-50">{formatPrice(p.price + 500)}</span>}
+                      </div>
+                    </td>
+                    <td className="px-6 py-5">
+                      <span className={`text-sm font-black ${p.stock < 10 ? 'text-red-500' : 'text-app-text'}`}>
+                        {p.stock} <span className="text-[10px] opacity-30">unités</span>
+                      </span>
+                    </td>
+                    <td className="px-6 py-5">
+                       {p.expiryDate ? (
+                         <div className={`px-3 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-widest inline-flex items-center gap-2 ${statusColors[expiryStatus]}`}>
+                            <Clock size={12} />
+                            {new Date(p.expiryDate).toLocaleDateString('fr-FR')}
+                         </div>
+                       ) : (
+                         <span className="text-[10px] text-gray-300 font-bold italic">N/A</span>
+                       )}
+                    </td>
+                    <td className="px-6 py-5">
+                      <div className="flex justify-center gap-3">
+                        <button 
+                          onClick={() => { setEditingProduct(p); setFormData(p); setShowModal(true); }}
+                          className="p-3 bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white rounded-[1rem] transition-all"
+                        >
+                          <Edit2 className="h-4 w-4" />
+                        </button>
+                        <button 
+                          onClick={() => handleDelete(p.id)}
+                          className="p-3 bg-red-50 text-red-600 hover:bg-red-600 hover:text-white rounded-[1rem] transition-all"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
@@ -609,123 +763,181 @@ function ProductsTab({ products }: any) {
               initial={{ opacity: 0, scale: 0.9, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.9, y: 20 }}
-              className="bg-card-bg rounded-3xl shadow-2xl w-full max-w-2xl relative overflow-hidden text-app-text"
+              className="bg-card-bg rounded-[3rem] shadow-2xl w-full max-w-3xl relative overflow-hidden text-app-text h-[90vh] flex flex-col"
             >
-              <div className="p-6 border-b border-border-subtle flex justify-between items-center">
-                <h3 className="text-xl font-black">{editingProduct ? 'Modifier' : 'Ajouter'} produit</h3>
-                <button onClick={() => setShowModal(false)}><X className="h-6 w-6 text-gray-400" /></button>
+              <div className="p-8 border-b border-border-subtle flex justify-between items-center shrink-0">
+                <div>
+                  <h3 className="text-2xl font-black tracking-tighter uppercase">{editingProduct ? 'Modifier' : 'Nouveau'} Produit</h3>
+                  <p className="text-xs text-gray-400 font-bold uppercase tracking-widest">Fiche technique du stock</p>
+                </div>
+                <button onClick={() => setShowModal(false)} className="bg-gray-100 p-2 rounded-xl hover:bg-red-50 hover:text-red-500 transition-all">
+                  <X className="h-6 w-6" />
+                </button>
               </div>
 
-              <form onSubmit={handleSubmit} className="p-8 grid md:grid-cols-2 gap-6">
-                <div className="space-y-2">
-                  <label className="text-xs font-black uppercase text-gray-400">Nom du produit</label>
-                  <input 
-                    type="text" 
-                    value={formData.name}
-                    onChange={(e) => setFormData({...formData, name: e.target.value})}
-                    className="w-full bg-app-background border border-border-subtle rounded-xl p-3 outline-none focus:border-brand-blue transition-all text-app-text"
-                    required 
-                  />
-                </div>
-                <div className="space-y-2">
-                  <label className="text-xs font-black uppercase text-gray-400">Prix (CFA)</label>
-                  <input 
-                    type="number" 
-                    value={formData.price}
-                    onChange={(e) => setFormData({...formData, price: Number(e.target.value)})}
-                    className="w-full bg-app-background border border-border-subtle rounded-xl p-3 outline-none focus:border-brand-blue transition-all text-app-text"
-                    required 
-                  />
-                </div>
-                <div className="space-y-2">
-                  <label className="text-xs font-black uppercase text-gray-400">Catégorie</label>
-                  <select 
-                    value={formData.category}
-                    onChange={handleCategoryChange}
-                    className="w-full bg-app-background border border-border-subtle rounded-xl p-3 outline-none focus:border-brand-blue transition-all text-app-text"
-                  >
-                    {Object.keys(categoryMap).map(cat => (
-                      <option key={cat}>{cat}</option>
-                    ))}
-                  </select>
-                </div>
-                <div className="space-y-2">
-                  <label className="text-xs font-black uppercase text-gray-400">Sous-catégorie</label>
-                  <select 
-                    value={formData.subCategory}
-                    onChange={(e) => setFormData({...formData, subCategory: e.target.value})}
-                    className="w-full bg-app-background border border-border-subtle rounded-xl p-3 outline-none focus:border-brand-blue transition-all text-app-text"
-                  >
-                    {(categoryMap[formData.category] || []).map(sub => (
-                      <option key={sub}>{sub}</option>
-                    ))}
-                    {(categoryMap[formData.category] || []).length === 0 && <option value="">Aucune</option>}
-                  </select>
-                </div>
-                <div className="space-y-2">
-                  <label className="text-xs font-black uppercase text-gray-400">Stock</label>
-                  <input 
-                    type="number" 
-                    value={formData.stock}
-                    onChange={(e) => setFormData({...formData, stock: Number(e.target.value)})}
-                    className="w-full bg-app-background border border-border-subtle rounded-xl p-3 outline-none focus:border-brand-blue transition-all text-app-text"
-                  />
-                </div>
-                <div className="md:col-span-2 space-y-2">
-                  <label className="text-xs font-black uppercase text-gray-400">Image du produit</label>
-                  <div className="flex items-start gap-4">
-                    <div className="flex-1">
-                      <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-border-subtle rounded-2xl cursor-pointer hover:border-brand-blue hover:bg-brand-blue/5 transition-all">
-                        <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                          <Plus className="h-6 w-6 text-gray-400 mb-2" />
-                          <p className="text-xs text-gray-500">Cliquez pour téléverser (JPG, PNG)</p>
-                        </div>
-                        <input type="file" className="hidden" accept="image/*" onChange={handleImageChange} />
-                      </label>
+              <form onSubmit={handleSubmit} className="p-8 overflow-y-auto flex-1 custom-scrollbar">
+                <div className="grid md:grid-cols-2 gap-8">
+                  <div className="space-y-6">
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest">Désignation</label>
+                      <input 
+                        type="text" 
+                        value={formData.name}
+                        onChange={(e) => setFormData({...formData, name: e.target.value})}
+                        className="w-full bg-app-background border border-border-subtle rounded-2xl p-4 outline-none focus:border-brand-blue transition-all font-bold"
+                        required 
+                      />
                     </div>
-                    {(imagePreview || formData.imageUrl) && (
-                      <div className="w-32 h-32 rounded-2xl overflow-hidden border border-border-subtle flex-shrink-0 relative group">
-                        <img src={imagePreview || formData.imageUrl} className="w-full h-full object-cover" alt="Preview" />
-                        <button 
-                          type="button"
-                          onClick={() => { setImagePreview(null); setFormData({...formData, imageUrl: ''}); }}
-                          className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity"
-                        >
-                          <X className="text-white h-6 w-6" />
-                        </button>
+                    
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest">Prix de vente (CFA)</label>
+                        <input 
+                          type="number" 
+                          value={formData.price}
+                          onChange={(e) => setFormData({...formData, price: Number(e.target.value)})}
+                          className="w-full bg-app-background border border-border-subtle rounded-2xl p-4 outline-none focus:border-brand-blue transition-all font-black text-brand-blue"
+                          required 
+                        />
                       </div>
-                    )}
+                      <div className="space-y-2">
+                        <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest">Stock Initial</label>
+                        <input 
+                          type="number" 
+                          value={formData.stock}
+                          onChange={(e) => setFormData({...formData, stock: Number(e.target.value)})}
+                          className="w-full bg-app-background border border-border-subtle rounded-2xl p-4 outline-none focus:border-brand-blue transition-all font-black"
+                          required
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest">Catégorie</label>
+                        <select 
+                          value={formData.category}
+                          onChange={handleCategoryChange}
+                          className="w-full bg-app-background border border-border-subtle rounded-2xl p-4 outline-none focus:border-brand-blue transition-all font-bold"
+                        >
+                          {Object.keys(categoryMap).map(cat => (
+                            <option key={cat}>{cat}</option>
+                          ))}
+                        </select>
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest">Sous-catégorie</label>
+                        <select 
+                          value={formData.subCategory}
+                          onChange={(e) => setFormData({...formData, subCategory: e.target.value})}
+                          className="w-full bg-app-background border border-border-subtle rounded-2xl p-4 outline-none focus:border-brand-blue transition-all font-bold"
+                        >
+                          {(categoryMap[formData.category] || []).map(sub => (
+                            <option key={sub}>{sub}</option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest">Date de péremption</label>
+                      <input 
+                        type="date" 
+                        value={formData.expiryDate}
+                        onChange={(e) => setFormData({...formData, expiryDate: e.target.value})}
+                        className="w-full bg-app-background border border-border-subtle rounded-2xl p-4 outline-none focus:border-brand-blue transition-all font-bold"
+                      />
+                      <p className="text-[9px] font-bold text-gray-400 italic">L'interface générera des alertes basées sur cette date.</p>
+                    </div>
+                  </div>
+
+                  <div className="space-y-6">
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest">Visuel Produit</label>
+                      <div className="relative aspect-square rounded-[2rem] overflow-hidden border-2 border-dashed border-border-subtle group hover:border-brand-blue transition-all">
+                        {imagePreview || formData.imageUrl ? (
+                          <>
+                            <img src={imagePreview || formData.imageUrl} className="w-full h-full object-cover" alt="Preview" />
+                            <button 
+                              type="button"
+                              onClick={() => { setImagePreview(null); setFormData({...formData, imageUrl: ''}); }}
+                              className="absolute top-4 right-4 bg-white shadow-xl p-3 rounded-2xl text-red-500 hover:bg-red-500 hover:text-white transition-all"
+                            >
+                              <Trash2 size={20} />
+                            </button>
+                          </>
+                        ) : (
+                          <label className="flex flex-col items-center justify-center w-full h-full cursor-pointer hover:bg-brand-blue/5">
+                            <Plus className="h-10 w-10 text-gray-400 mb-2" />
+                            <p className="text-[10px] font-black uppercase tracking-widest text-gray-400">Importer Image</p>
+                            <input type="file" className="hidden" accept="image/*" onChange={handleImageChange} />
+                          </label>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="bg-app-background p-6 rounded-3xl space-y-4">
+                       <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400">Options marketing</h4>
+                       <div className="flex items-center justify-between">
+                          <div>
+                             <p className="text-sm font-bold">Activer le produit</p>
+                             <p className="text-[10px] text-gray-400">Rendre visible sur la boutique</p>
+                          </div>
+                          <input 
+                            type="checkbox" 
+                            checked={formData.isActive}
+                            onChange={(e) => setFormData({...formData, isActive: e.target.checked})}
+                            className="h-6 w-6 rounded-lg text-brand-blue border-gray-300"
+                          />
+                       </div>
+                       <div className="flex items-center justify-between">
+                          <div>
+                             <p className="text-sm font-bold text-brand-red">Produit en Promotion</p>
+                             <p className="text-[10px] text-gray-400">Badge "Promo" et prix réduit</p>
+                          </div>
+                          <input 
+                            type="checkbox" 
+                            checked={formData.isPromo}
+                            onChange={(e) => setFormData({...formData, isPromo: e.target.checked})}
+                            className="h-6 w-6 rounded-lg text-brand-red border-gray-300"
+                          />
+                       </div>
+                       {formData.isPromo && (
+                         <div className="pt-2 animate-slideUp">
+                            <label className="text-[10px] font-black uppercase text-brand-red tracking-widest">Nouveau Prix Promo (CFA)</label>
+                            <input 
+                              type="number" 
+                              value={formData.promoPrice}
+                              onChange={(e) => setFormData({...formData, promoPrice: Number(e.target.value)})}
+                              className="w-full mt-1 bg-white border border-brand-red/20 rounded-xl p-3 outline-none focus:border-brand-red transition-all font-black text-brand-red"
+                            />
+                         </div>
+                       )}
+                    </div>
                   </div>
                 </div>
-                <div className="md:col-span-2 space-y-2">
-                  <label className="text-xs font-black uppercase text-gray-400">Description</label>
+
+                <div className="space-y-2 mt-8">
+                  <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest">Description détaillée</label>
                   <textarea 
                     value={formData.description}
                     onChange={(e) => setFormData({...formData, description: e.target.value})}
-                    className="w-full bg-app-background border border-border-subtle rounded-xl p-3 h-24 outline-none focus:border-brand-blue transition-all resize-none text-app-text"
-                    placeholder="Détails du produit..."
+                    className="w-full bg-app-background border border-border-subtle rounded-2xl p-4 h-32 outline-none focus:border-brand-blue transition-all resize-none font-medium"
+                    placeholder="Contenu nutritionnel, origine, marques..."
                   />
-                </div>
-                <div className="md:col-span-2 flex items-center gap-3">
-                  <input 
-                    type="checkbox" 
-                    checked={formData.isActive}
-                    onChange={(e) => setFormData({...formData, isActive: e.target.checked})}
-                    className="h-5 w-5 rounded text-brand-blue focus:ring-brand-blue border-gray-300"
-                  />
-                  <span className="text-sm font-bold text-gray-400">Produit activé (visible par les clients)</span>
-                </div>
-                
-                <div className="md:col-span-2 pt-4">
-                  <button 
-                    type="submit" 
-                    disabled={loading}
-                    className="w-full btn-primary h-14 rounded-2xl font-bold text-lg disabled:opacity-50 shadow-xl shadow-brand-blue/20"
-                  >
-                    {loading ? 'Enregistrement...' : (editingProduct ? 'Mettre à jour' : 'Ajouter au catalogue')}
-                  </button>
                 </div>
               </form>
+
+              <div className="p-8 border-t border-border-subtle shrink-0">
+                <button 
+                  type="submit" 
+                  onClick={handleSubmit}
+                  disabled={loading}
+                  className="w-full bg-brand-blue text-white h-16 rounded-[2rem] font-black uppercase tracking-[0.2em] disabled:opacity-50 shadow-2xl shadow-brand-blue/30 hover:scale-[1.02] active:scale-95 transition-all"
+                >
+                  {loading ? 'Traitement en cours...' : (editingProduct ? 'Mettre à jour le stock' : 'Sauvegarder dans le catalogue')}
+                </button>
+              </div>
             </motion.div>
           </div>
         )}

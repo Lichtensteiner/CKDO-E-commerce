@@ -14,6 +14,15 @@ export interface UserProfile {
   addresses?: Address[];
   loyaltyPoints?: number;
   favorites?: string[]; // Array of product IDs
+  settings?: {
+    theme: string;
+    lang: string;
+    pushEnabled: boolean;
+    emailFactureEnabled: boolean;
+  };
+  security?: {
+    twoFactorEnabled: boolean;
+  };
 }
 
 export interface Address {
@@ -48,6 +57,7 @@ export interface Product {
   subCategory?: string;
   imageUrl: string;
   stock: number;
+  expiryDate?: string; // ISO Date
   isActive: boolean;
   isPromo: boolean;
   promoPrice?: number;

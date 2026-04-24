@@ -12,7 +12,7 @@ import AdminDashboard from './pages/AdminDashboard';
 import LiveOrderTracker from './components/orders/LiveOrderTracker';
 import { auth, db } from './lib/firebase';
 import { onAuthStateChanged } from 'firebase/auth';
-import { doc, getDoc, onSnapshot } from 'firebase/firestore';
+import { doc, getDoc, onSnapshot, setDoc, serverTimestamp } from 'firebase/firestore';
 import { UserProfile } from './types';
 
 import { ADMIN_EMAILS } from './constants/admins';
@@ -33,7 +33,7 @@ export default function App() {
         const profileRef = doc(db, 'users', firebaseUser.uid);
         
         // Use real-time synchronization for profile
-        unsubscribeProfile = onSnapshot(profileRef, (snap) => {
+        unsubscribeProfile = onSnapshot(profileRef, async (snap) => {
           if (snap.exists()) {
             const userData = snap.data() as UserProfile;
             // Handle role legacy/admin check
@@ -43,7 +43,7 @@ export default function App() {
               setUser(userData);
             }
           } else {
-            // Profile entry doesn't exist yet (new user)
+            // Profile entry doesn't exist yet (new user) - CREATE IT
             const newUser: UserProfile = {
               uid: firebaseUser.uid,
               email: firebaseUser.email!,
@@ -51,8 +51,27 @@ export default function App() {
               photoURL: firebaseUser.photoURL || undefined,
               role: isAdminEmail ? 'admin' : 'customer',
               createdAt: new Date().toISOString(),
+              settings: {
+                theme: 'light',
+                lang: 'FR',
+                pushEnabled: true,
+                emailFactureEnabled: true
+              },
+              security: {
+                twoFactorEnabled: false
+              }
             };
-            setUser(newUser);
+            
+            try {
+              await setDoc(profileRef, {
+                ...newUser,
+                updatedAt: serverTimestamp()
+              });
+              // Local state will be updated by the next snapshot trigger
+            } catch (error) {
+              console.error("Error creating user profile:", error);
+              setUser(newUser); // Fallback to local state
+            }
           }
           setLoading(false);
         });
