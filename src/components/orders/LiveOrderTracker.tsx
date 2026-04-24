@@ -50,7 +50,7 @@ export default function LiveOrderTracker({ user }: { user: UserProfile | null })
       initial={{ y: 100, opacity: 0 }}
       animate={{ y: 0, opacity: 1 }}
       exit={{ y: 100, opacity: 0 }}
-      className="fixed bottom-6 right-6 left-6 md:left-auto md:w-96 z-50"
+      className="fixed bottom-24 lg:bottom-6 right-6 left-6 md:left-auto md:w-96 z-50"
     >
       <div className="bg-white rounded-[2rem] shadow-2xl border border-gray-100 overflow-hidden ring-4 ring-brand-blue/5">
         <div className="p-1 flex justify-end">

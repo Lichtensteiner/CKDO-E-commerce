@@ -27,7 +27,7 @@ export default function Home({ onAddToCart }: { onAddToCart: (p: Product) => voi
   return (
     <div className="space-y-12 pb-20">
       {/* Hero Section */}
-      <section className="relative h-[500px] flex items-center overflow-hidden bg-brand-blue">
+      <section className="relative h-[400px] md:h-[500px] flex items-center overflow-hidden bg-brand-blue">
         <div className="absolute inset-0 opacity-20">
           <img 
             src="https://picsum.photos/seed/grocery/1600/900" 
@@ -42,19 +42,21 @@ export default function Home({ onAddToCart }: { onAddToCart: (p: Product) => voi
             animate={{ opacity: 1, y: 0 }}
             className="max-w-2xl space-y-6"
           >
-            <h1 className="text-5xl md:text-7xl font-extrabold tracking-tight leading-[1.1]">
+            <h1 className="text-3xl sm:text-4xl md:text-7xl font-extrabold tracking-tight leading-[1.1] uppercase italic">
               Faites vos courses, on s'occupe du reste.
             </h1>
-            <p className="text-xl text-blue-100 max-w-lg">
+            <p className="text-lg md:text-xl text-blue-100 max-w-lg font-medium">
               Le meilleur de CKDO directement sur votre mobile. Click & Collect rapide ou livraison à domicile.
             </p>
-            <Link to="/products" className="btn-primary px-8 py-4 rounded-full font-bold text-lg flex items-center gap-2">
-                Commander maintenant
-                <ArrowRight className="h-5 w-5" />
+            <div className="flex flex-col sm:flex-row gap-4 pt-4">
+              <Link to="/products" className="btn-primary px-8 py-4 rounded-2xl font-black text-xs uppercase tracking-widest flex items-center justify-center gap-2 shadow-2xl shadow-brand-red/30">
+                  Commander
+                  <ArrowRight className="h-4 w-4" />
               </Link>
-              <button className="btn-secondary px-8 py-4 rounded-full font-bold text-lg">
-                En savoir plus
+              <button className="px-8 py-4 bg-white/10 backdrop-blur-md text-white border border-white/20 rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-white/20 transition-all">
+                Nos magasins
               </button>
+            </div>
           </motion.div>
         </div>
       </section>

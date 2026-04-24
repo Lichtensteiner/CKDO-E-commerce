@@ -4,15 +4,29 @@ import { Link } from 'react-router-dom';
 import { UserProfile } from '../../types';
 import { useTheme } from '../../context/ThemeContext';
 
-export default function Header({ cartCount, user }: { cartCount: number; user: UserProfile | null }) {
+export default function Header({ 
+  cartCount, 
+  user, 
+  onOpenSidebar 
+}: { 
+  cartCount: number; 
+  user: UserProfile | null;
+  onOpenSidebar: () => void;
+}) {
   const { theme, toggleTheme } = useTheme();
 
   return (
-    <header className="sticky top-0 z-50 w-full bg-card-bg border-b border-border-subtle transition-colors duration-300">
+    <header className="sticky top-0 z-[55] w-full bg-card-bg border-b border-border-subtle transition-colors duration-300">
       <div className="container mx-auto px-4 h-16 flex items-center justify-between gap-4">
         <div className="flex items-center gap-4">
-          <Menu className="h-6 w-6 lg:hidden text-app-text" />
-          <Link to="/" className="text-2xl font-bold text-brand-blue tracking-tighter">
+          <button 
+            onClick={onOpenSidebar}
+            className="p-2 -ml-2 hover:bg-app-background rounded-xl lg:hidden text-app-text transition-colors"
+            aria-label="Open menu"
+          >
+            <Menu className="h-6 w-6" />
+          </button>
+          <Link to="/" className="text-2xl font-black text-brand-blue tracking-tighter">
             CKDO
           </Link>
         </div>

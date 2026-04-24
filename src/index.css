@@ -53,3 +53,13 @@
     @apply hover:shadow-xl hover:-translate-y-1 transition-all duration-300 bg-card-bg border border-border-subtle;
   }
 }
+
+@layer utilities {
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+}

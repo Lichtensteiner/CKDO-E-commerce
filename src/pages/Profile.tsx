@@ -56,10 +56,22 @@ import { motion, AnimatePresence } from 'motion/react';
 import { MOCK_PRODUCTS } from '../constants/products';
 import NearbyStores from '../components/store/NearbyStores';
 import InvoiceModal from '../components/orders/InvoiceModal';
+import { geminiService } from '../services/geminiService';
+import { Loader2, ShoppingCart, Sparkles } from 'lucide-react';
 
 type ProfileTab = 'dashboard' | 'loyalty' | 'coupons' | 'profile' | 'orders' | 'favorites' | 'addresses' | 'security' | 'settings';
 
-export default function Profile({ user, onAddToCart, setCart }: { user: UserProfile | null; onAddToCart: (p: any) => void; setCart: (c: any[]) => void }) {
+export default function Profile({ 
+  user, 
+  onAddToCart, 
+  setCart,
+  catalog
+}: { 
+  user: UserProfile | null; 
+  onAddToCart: (p: any) => void; 
+  setCart: (c: any[]) => void;
+  catalog: Product[];
+}) {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<ProfileTab>('dashboard');
   const [orders, setOrders] = useState<Order[]>([]);
@@ -67,6 +79,9 @@ export default function Profile({ user, onAddToCart, setCart }: { user: UserProf
   const [loading, setLoading] = useState(true);
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [isInvoiceOpen, setIsInvoiceOpen] = useState(false);
+
+  const [predictionLoading, setPredictionLoading] = useState(false);
+  const [predictedItems, setPredictedItems] = useState<Product[]>([]);
 
   const openInvoice = (order: Order) => {
     setSelectedOrder(order);
@@ -102,7 +117,7 @@ export default function Profile({ user, onAddToCart, setCart }: { user: UserProf
 
       // Fetch favorites
       if (user.favorites && user.favorites.length > 0) {
-        const favProducts = MOCK_PRODUCTS.filter(p => user.favorites?.includes(p.id));
+        const favProducts = catalog.filter(p => user.favorites?.includes(p.id));
         setFavorites(favProducts);
       }
 
@@ -110,7 +125,7 @@ export default function Profile({ user, onAddToCart, setCart }: { user: UserProf
     } else {
       setLoading(false);
     }
-  }, [user]);
+  }, [user, catalog]);
 
   const [loginLoading, setLoginLoading] = useState(false);
   const [loginError, setLoginError] = useState('');
@@ -201,7 +216,7 @@ export default function Profile({ user, onAddToCart, setCart }: { user: UserProf
         <aside className="w-full lg:w-72 shrink-0">
           <div className="bg-card-bg rounded-3xl border border-border-subtle shadow-sm overflow-hidden sticky top-30">
             {/* User Info Header */}
-            <div className="p-6 border-b border-border-subtle flex items-center gap-4 bg-app-background">
+            <div className="p-6 border-b border-border-subtle flex items-center gap-4 bg-app-background lg:bg-transparent">
               <img 
                 src={user.photoURL || `https://ui-avatars.com/api/?name=${user.displayName || 'Client'}&background=0D52D6&color=fff`} 
                 className="w-12 h-12 rounded-xl object-cover ring-2 ring-card-bg shadow-sm" 
@@ -216,31 +231,33 @@ export default function Profile({ user, onAddToCart, setCart }: { user: UserProf
               </div>
             </div>
 
-            {/* Navigation */}
-            <nav className="p-4 space-y-1">
+            {/* Navigation - Horizontal scroll on mobile */}
+            <nav className="p-4 flex lg:flex-col gap-2 overflow-x-auto lg:overflow-x-visible no-scrollbar pb-6 lg:pb-4">
               {menuItems.map((item) => (
                 <button
                   key={item.id}
                   onClick={() => setActiveTab(item.id as ProfileTab)}
-                  className={`w-full flex items-center justify-between p-3.5 rounded-xl transition-all group ${
+                  className={`flex flex-col lg:flex-row items-center lg:justify-between p-3 lg:p-3.5 rounded-xl transition-all group shrink-0 min-w-[100px] lg:min-w-0 ${
                     activeTab === item.id 
-                    ? 'bg-brand-blue text-white shadow-md shadow-brand-blue/20 translate-x-1' 
-                    : 'text-gray-400 hover:bg-app-background hover:text-app-text'
+                    ? 'bg-brand-blue text-white shadow-md shadow-brand-blue/20 lg:translate-x-1' 
+                    : 'bg-app-background lg:bg-transparent text-gray-400 hover:bg-gray-50 hover:text-app-text'
                   }`}
                 >
-                  <div className="flex items-center gap-3">
+                  <div className="flex flex-col lg:flex-row items-center gap-2 lg:gap-3">
                     <span className={`shrink-0 ${activeTab === item.id ? 'text-white' : 'group-hover:text-brand-blue'}`}>
                       {React.cloneElement(item.icon as React.ReactElement, { size: 18 })}
                     </span>
-                    <span className="text-sm font-bold uppercase tracking-tight">{item.label}</span>
+                    <span className="text-[10px] lg:text-sm font-bold uppercase tracking-tight text-center lg:text-left">{item.label}</span>
                   </div>
-                  <ChevronRight className={`w-4 h-4 transition-transform ${activeTab === item.id ? 'translate-x-1' : 'opacity-0 group-hover:opacity-100'}`} />
+                  <ChevronRight className={`hidden lg:block w-4 h-4 transition-transform ${activeTab === item.id ? 'translate-x-1' : 'opacity-0 group-hover:opacity-100'}`} />
                 </button>
               ))}
             </nav>
 
-            {/* Logout */}
-            <div className="p-4 border-t border-border-subtle bg-app-background/30">
+            {/* Logout - Hidden on mobile nav bar, usually in a profile subpage or similar. 
+                But for simplicity I'll keep it as a button at the end of the scroll or keep it visible only on large screens. 
+            */}
+            <div className="hidden lg:block p-4 border-t border-border-subtle bg-app-background/30">
               <button 
                 onClick={handleLogout}
                 className="w-full flex items-center justify-center gap-3 py-3 rounded-xl text-red-500 hover:bg-red-500/10 transition-colors font-black text-xs uppercase tracking-widest"
@@ -262,7 +279,16 @@ export default function Profile({ user, onAddToCart, setCart }: { user: UserProf
               exit={{ opacity: 0, x: -10 }}
               transition={{ duration: 0.2 }}
             >
-              {activeTab === 'dashboard' && <DashboardSection user={user} orders={orders} setActiveTab={setActiveTab} onOpenInvoice={openInvoice} />}
+              {activeTab === 'dashboard' && (
+                <DashboardSection 
+                  user={user} 
+                  orders={orders} 
+                  setActiveTab={setActiveTab} 
+                  onOpenInvoice={openInvoice} 
+                  catalog={catalog}
+                  onAddToCart={onAddToCart}
+                />
+              )}
               {activeTab === 'loyalty' && <LoyaltySection user={user} />}
               {activeTab === 'coupons' && <CouponsSection user={user} />}
               {activeTab === 'profile' && <ProfileSection user={user} />}
@@ -288,10 +314,39 @@ export default function Profile({ user, onAddToCart, setCart }: { user: UserProf
 
 // --- SUB-SECTIONS ---
 
-function DashboardSection({ user, orders, setActiveTab, onOpenInvoice }: { user: UserProfile, orders: Order[], setActiveTab: (tab: ProfileTab) => void, onOpenInvoice: (o: Order) => void }) {
+function DashboardSection({ 
+  user, 
+  orders, 
+  setActiveTab, 
+  onOpenInvoice, 
+  catalog,
+  onAddToCart
+}: { 
+  user: UserProfile, 
+  orders: Order[], 
+  setActiveTab: (tab: ProfileTab) => void, 
+  onOpenInvoice: (o: Order) => void,
+  catalog: Product[],
+  onAddToCart: (p: any) => void
+}) {
   const navigate = useNavigate();
   const totalSpent = orders.reduce((acc, current) => acc + (current.status !== 'cancelled' ? current.totalAmount : 0), 0);
   const lastOrder = orders[0];
+
+  const [predicting, setPredicting] = useState(false);
+  const [predictedItems, setPredictedItems] = useState<Product[]>([]);
+
+  const handlePredict = async () => {
+    setPredicting(true);
+    try {
+      const items = await geminiService.predictMonthlyCourses(orders, catalog);
+      setPredictedItems(items);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setPredicting(false);
+    }
+  };
 
   return (
     <div className="space-y-8">
@@ -338,6 +393,67 @@ function DashboardSection({ user, orders, setActiveTab, onOpenInvoice }: { user:
            </div>
         </div>
       </div>
+
+      {/* Monthly Courses Prediction IA */}
+      <section className="bg-brand-blue/5 border border-brand-blue/10 rounded-[2.5rem] p-8 space-y-6">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+          <div className="flex items-center gap-4">
+            <div className="bg-brand-blue text-white p-3 rounded-2xl">
+              <Sparkles className="h-6 w-6" />
+            </div>
+            <div>
+              <h3 className="text-xl font-black text-app-text uppercase tracking-tighter italic">Mes Courses du mois</h3>
+              <p className="text-sm text-gray-500 font-medium">L'IA de CKDO a préparé votre liste habituelle.</p>
+            </div>
+          </div>
+          <button 
+            onClick={handlePredict}
+            disabled={predicting}
+            className="px-6 py-3 bg-brand-blue text-white rounded-2xl font-bold flex items-center gap-2 hover:scale-105 active:scale-95 transition-all shadow-xl shadow-brand-blue/20 disabled:opacity-50"
+          >
+            {predicting ? <Loader2 className="h-5 w-5 animate-spin" /> : <Zap className="h-5 w-5" />}
+            {predicting ? 'Analyse...' : 'Générer ma liste'}
+          </button>
+        </div>
+
+        {predictedItems.length > 0 && (
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4"
+          >
+            {predictedItems.map((item) => (
+              <div key={item.id} className="bg-card-bg p-3 rounded-2xl border border-border-subtle shadow-sm flex flex-col gap-2 relative group uppercase">
+                <div className="aspect-square rounded-xl overflow-hidden bg-app-background h-24">
+                  <img src={item.imageUrl} alt={item.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform" />
+                </div>
+                <p className="text-[10px] font-bold text-app-text truncate">{item.name}</p>
+                <div className="flex justify-between items-center">
+                   <p className="text-[10px] font-black text-brand-blue">{formatPrice(item.price)}</p>
+                   <button 
+                    onClick={() => onAddToCart(item)}
+                    className="p-1.5 bg-brand-green/10 text-brand-green rounded-lg hover:bg-brand-green hover:text-white transition-colors"
+                   >
+                     <Plus size={12} />
+                   </button>
+                </div>
+              </div>
+            ))}
+            <div className="col-span-full pt-4">
+               <button 
+                onClick={() => {
+                   predictedItems.forEach(item => onAddToCart(item));
+                   setPredictedItems([]);
+                }}
+                className="w-full py-4 bg-brand-green text-white rounded-2xl font-black uppercase tracking-widest text-xs shadow-xl shadow-brand-green/20 hover:scale-[1.01] transition-all flex items-center justify-center gap-2"
+               >
+                 <ShoppingCart className="h-4 w-4" />
+                 Tout ajouter au panier
+               </button>
+            </div>
+          </motion.div>
+        )}
+      </section>
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">

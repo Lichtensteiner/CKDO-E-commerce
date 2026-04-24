@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
 import Header from './components/layout/Header';
+import MobileNav from './components/layout/MobileNav';
 import Home from './pages/Home';
 import ProductList from './pages/ProductList';
 import Cart from './pages/Cart';
@@ -10,21 +11,31 @@ import ProductDetail from './pages/ProductDetail';
 import Login from './pages/Login';
 import AdminDashboard from './pages/AdminDashboard';
 import LiveOrderTracker from './components/orders/LiveOrderTracker';
+import AIAssistant from './components/AIAssistant';
+import SidebarDrawer from './components/layout/SidebarDrawer';
 import { auth, db } from './lib/firebase';
 import { onAuthStateChanged } from 'firebase/auth';
 import { doc, getDoc, onSnapshot, setDoc, serverTimestamp } from 'firebase/firestore';
-import { UserProfile } from './types';
+import { UserProfile, Product } from './types';
 
 import { ADMIN_EMAILS } from './constants/admins';
 import { storeService } from './services/storeService';
+import { productService } from './services/productService';
 
 export default function App() {
   const [user, setUser] = useState<UserProfile | null>(null);
   const [cart, setCart] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [globalProducts, setGlobalProducts] = useState<Product[]>([]);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   useEffect(() => {
     storeService.seedStores();
+    
+    const unsubProducts = productService.subscribeToActiveProducts((fetched) => {
+      setGlobalProducts(fetched);
+    });
+
     let unsubscribeProfile: (() => void) | null = null;
 
     const unsubAuth = onAuthStateChanged(auth, async (firebaseUser) => {
@@ -84,6 +95,7 @@ export default function App() {
 
     return () => {
       unsubAuth();
+      unsubProducts();
       if (unsubscribeProfile) unsubscribeProfile();
     };
   }, []);
@@ -100,6 +112,24 @@ export default function App() {
     });
   };
 
+  const addItemsToCart = (items: any[]) => {
+    setCart((prev) => {
+      let newCart = [...prev];
+      items.forEach(newItem => {
+        const existingIdx = newCart.findIndex(item => item.id === newItem.id);
+        if (existingIdx > -1) {
+          newCart[existingIdx] = { 
+            ...newCart[existingIdx], 
+            quantity: newCart[existingIdx].quantity + newItem.quantity 
+          };
+        } else {
+          newCart.push(newItem);
+        }
+      });
+      return newCart;
+    });
+  };
+
   if (loading) {
     return (
       <div className="h-screen w-full flex items-center justify-center">
@@ -110,22 +140,67 @@ export default function App() {
 
   return (
     <Router>
-      <div className="min-h-screen flex flex-col bg-app-background">
-        <Header user={user} cartCount={cart.reduce((acc, item) => acc + item.quantity, 0)} />
-        <main className="flex-1">
-          <Routes>
-            <Route path="/" element={<Home onAddToCart={addToCart} />} />
-            <Route path="/products" element={<ProductList onAddToCart={addToCart} />} />
-            <Route path="/cart" element={<Cart cart={cart} setCart={setCart} />} />
-            <Route path="/checkout" element={<Checkout cart={cart} setCart={setCart} user={user} />} />
-            <Route path="/product/:id" element={<ProductDetail onAddToCart={addToCart} user={user} />} />
-            <Route path="/profile" element={<Profile user={user} onAddToCart={addToCart} setCart={setCart} />} />
-            <Route path="/login" element={<Login />} />
-            <Route path="/admin/*" element={user?.role === 'admin' ? <AdminDashboard user={user} /> : <Login />} />
-          </Routes>
-        </main>
-        <LiveOrderTracker user={user} />
-      </div>
+      <AppContent 
+        user={user} 
+        cart={cart} 
+        setCart={setCart} 
+        isSidebarOpen={isSidebarOpen} 
+        setIsSidebarOpen={setIsSidebarOpen}
+        globalProducts={globalProducts}
+        addToCart={addToCart}
+        addItemsToCart={addItemsToCart}
+      />
     </Router>
+  );
+}
+
+function AppContent({ 
+  user, 
+  cart, 
+  setCart, 
+  isSidebarOpen, 
+  setIsSidebarOpen, 
+  globalProducts,
+  addToCart,
+  addItemsToCart
+}: any) {
+  const location = useLocation();
+  const isAdminPath = location.pathname.startsWith('/admin');
+
+  return (
+    <div className="min-h-screen flex flex-col bg-app-background">
+      {!isAdminPath && (
+        <Header 
+          user={user} 
+          cartCount={cart.reduce((acc: number, item: any) => acc + item.quantity, 0)} 
+          onOpenSidebar={() => setIsSidebarOpen(true)}
+        />
+      )}
+      
+      {!isAdminPath && (
+        <SidebarDrawer 
+          isOpen={isSidebarOpen} 
+          onClose={() => setIsSidebarOpen(false)} 
+          user={user} 
+        />
+      )}
+
+      <main className={`flex-1 ${!isAdminPath ? 'pb-20 lg:pb-0' : ''}`}>
+        <Routes>
+          <Route path="/" element={<Home onAddToCart={addToCart} />} />
+          <Route path="/products" element={<ProductList onAddToCart={addToCart} />} />
+          <Route path="/cart" element={<Cart cart={cart} setCart={setCart} catalog={globalProducts} onAddToCart={addToCart} user={user} />} />
+          <Route path="/checkout" element={<Checkout cart={cart} setCart={setCart} user={user} />} />
+          <Route path="/product/:id" element={<ProductDetail onAddToCart={addToCart} user={user} catalog={globalProducts} />} />
+          <Route path="/profile" element={<Profile user={user} onAddToCart={addToCart} setCart={setCart} catalog={globalProducts} />} />
+          <Route path="/login" element={<Login />} />
+          <Route path="/admin/*" element={user?.role === 'admin' ? <AdminDashboard user={user} /> : <Login />} />
+        </Routes>
+      </main>
+
+      {!isAdminPath && <MobileNav cartCount={cart.reduce((acc: number, item: any) => acc + item.quantity, 0)} />}
+      {!isAdminPath && <AIAssistant catalog={globalProducts} onAddItemsToCart={addItemsToCart} />}
+      {!isAdminPath && <LiveOrderTracker user={user} />}
+    </div>
   );
 }

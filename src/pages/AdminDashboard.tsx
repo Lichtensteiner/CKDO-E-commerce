@@ -75,7 +75,7 @@ export default function AdminDashboard({ user }: { user: UserProfile | null }) {
   const [products, setProducts] = useState<any[]>([]);
   const [customers, setCustomers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(window.innerWidth > 1024);
   const [newOrdersCount, setNewOrdersCount] = useState(0);
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [isInvoiceOpen, setIsInvoiceOpen] = useState(false);
@@ -219,12 +219,28 @@ export default function AdminDashboard({ user }: { user: UserProfile | null }) {
   if (loading) return <div className="h-screen flex items-center justify-center">Chargement...</div>;
 
   return (
-    <div className={`min-h-screen bg-app-background flex transition-colors duration-300`}>
+    <div className="min-h-screen bg-app-background flex transition-colors duration-300 relative overflow-hidden">
+      {/* Sidebar Overlay for Mobile */}
+      <AnimatePresence>
+        {isSidebarOpen && window.innerWidth <= 1024 && (
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => setIsSidebarOpen(false)}
+            className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 transition-colors"
+          />
+        )}
+      </AnimatePresence>
+
       {/* Sidebar */}
       <motion.aside 
         initial={false}
-        animate={{ width: isSidebarOpen ? 280 : 80 }}
-        className="bg-card-bg border-r border-border-subtle flex flex-col h-screen sticky top-0"
+        animate={{ 
+          width: isSidebarOpen ? 280 : (window.innerWidth <= 1024 ? 0 : 80),
+          x: (window.innerWidth <= 1024 && !isSidebarOpen) ? -280 : 0
+        }}
+        className={`bg-card-bg border-r border-border-subtle flex flex-col h-screen sticky top-0 z-50 transition-all ${window.innerWidth <= 1024 ? 'fixed' : 'sticky'}`}
       >
         <div className="p-6 flex items-center justify-between">
           {isSidebarOpen && (
@@ -294,13 +310,21 @@ export default function AdminDashboard({ user }: { user: UserProfile | null }) {
       {/* Main Content */}
       <main className="flex-1 overflow-y-auto">
         <header className="bg-card-bg/80 backdrop-blur-md border-b border-border-subtle p-6 sticky top-0 z-10 flex justify-between items-center">
-          <h2 className="text-xl font-bold text-app-text uppercase tracking-tight">
-            {activeTab === 'overview' && 'Tableau de bord'}
-            {activeTab === 'products' && 'Gestion Catalogue'}
-            {activeTab === 'orders' && 'Commandes Clients'}
-            {activeTab === 'customers' && 'Utilisateurs'}
-            {activeTab === 'settings' && 'Configuration'}
-          </h2>
+          <div className="flex items-center gap-4">
+            <button 
+              onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+              className="p-2 hover:bg-app-background rounded-xl text-app-text"
+            >
+              <Menu size={24} />
+            </button>
+            <h2 className="text-xl font-bold text-app-text uppercase tracking-tight hidden sm:block">
+              {activeTab === 'overview' && 'Tableau de bord'}
+              {activeTab === 'products' && 'Gestion Catalogue'}
+              {activeTab === 'orders' && 'Commandes Clients'}
+              {activeTab === 'customers' && 'Utilisateurs'}
+              {activeTab === 'settings' && 'Configuration'}
+            </h2>
+          </div>
           <div className="flex items-center gap-4">
             <div className="text-right hidden sm:block">
               <p className="text-sm font-black text-app-text">{user?.displayName || 'Administrateur'}</p>

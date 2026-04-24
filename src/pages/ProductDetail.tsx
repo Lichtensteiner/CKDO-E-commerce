@@ -8,7 +8,18 @@ import { db } from '../lib/firebase';
 import { doc, getDoc, collection, getDocs, query, where, arrayUnion, arrayRemove, updateDoc } from 'firebase/firestore';
 import { UserProfile } from '../types';
 
-export default function ProductDetail({ onAddToCart, user }: { onAddToCart: (p: any) => void; user: UserProfile | null }) {
+import AIAssistant from '../components/AIAssistant';
+import AIRecommendations from '../components/AIRecommendations';
+
+export default function ProductDetail({ 
+  onAddToCart, 
+  user, 
+  catalog 
+}: { 
+  onAddToCart: (p: any) => void; 
+  user: UserProfile | null;
+  catalog: any[];
+}) {
   const { id } = useParams();
   const navigate = useNavigate();
   const [product, setProduct] = useState<any>(null);
@@ -227,6 +238,15 @@ export default function ProductDetail({ onAddToCart, user }: { onAddToCart: (p: 
           </div>
         </section>
       )}
+
+      {/* AI Recommendations */}
+      <AIRecommendations 
+        currentCart={[]} 
+        userId={user?.uid} 
+        catalog={catalog} 
+        onAddToCart={onAddToCart}
+        title="Vous pourriez aussi aimer..."
+      />
     </div>
   );
 }

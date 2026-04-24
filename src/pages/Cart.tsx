@@ -2,8 +2,22 @@ import React from 'react';
 import { Trash2, Minus, Plus, ShoppingBag, ArrowRight } from 'lucide-react';
 import { formatPrice } from '../lib/utils';
 import { Link } from 'react-router-dom';
+import AIRecommendations from '../components/AIRecommendations';
+import { Product } from '../types';
 
-export default function Cart({ cart, setCart }: { cart: any[]; setCart: any }) {
+export default function Cart({ 
+  cart, 
+  setCart, 
+  catalog, 
+  onAddToCart, 
+  user 
+}: { 
+  cart: any[]; 
+  setCart: any; 
+  catalog: Product[]; 
+  onAddToCart: (p: Product) => void;
+  user: any;
+}) {
   const updateQuantity = (id: string, delta: number) => {
     setCart((prev: any[]) =>
       prev.map((item) =>
@@ -121,6 +135,15 @@ export default function Cart({ cart, setCart }: { cart: any[]; setCart: any }) {
           </div>
         </div>
       </div>
+
+      {/* AI Suggestions for Cart */}
+      <AIRecommendations 
+        currentCart={cart} 
+        userId={user?.uid} 
+        catalog={catalog} 
+        onAddToCart={onAddToCart}
+        title="Avez-vous oublié quelque chose ?"
+      />
     </div>
   );
 }
