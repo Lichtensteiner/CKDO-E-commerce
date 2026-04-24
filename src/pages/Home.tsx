@@ -14,7 +14,7 @@ export default function Home({ onAddToCart }: { onAddToCart: (p: Product) => voi
 
   useEffect(() => {
     const unsub = productService.subscribeToActiveProducts((fetched) => {
-      setProducts(fetched.filter(p => p.isActive).slice(0, 4));
+      setProducts(fetched.filter(p => p.isActive !== false).slice(0, 4));
       setLoading(false);
     });
     return () => unsub();

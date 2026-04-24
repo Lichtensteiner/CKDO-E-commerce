@@ -17,6 +17,7 @@ import LegalNotice from './pages/LegalNotice';
 import LiveOrderTracker from './components/orders/LiveOrderTracker';
 import AIAssistant from './components/AIAssistant';
 import SidebarDrawer from './components/layout/SidebarDrawer';
+import NewProductTicker from './components/layout/NewProductTicker';
 import { auth, db } from './lib/firebase';
 import { onAuthStateChanged } from 'firebase/auth';
 import { doc, getDoc, onSnapshot, setDoc, serverTimestamp } from 'firebase/firestore';
@@ -173,6 +174,9 @@ function AppContent({
 
   return (
     <div className="min-h-screen flex flex-col bg-app-background">
+      {!isAdminPath && (
+        <NewProductTicker products={globalProducts} />
+      )}
       {!isAdminPath && (
         <Header 
           user={user} 

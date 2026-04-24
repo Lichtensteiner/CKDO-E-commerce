@@ -1,6 +1,7 @@
 import express from 'express';
 import { createServer as createViteServer } from 'vite';
 import path from 'path';
+import fs from 'fs';
 import { fileURLToPath } from 'url';
 import admin from 'firebase-admin';
 import { generateInvoicePDF } from './server/pdfGenerator.js';
@@ -8,13 +9,27 @@ import { generateInvoicePDF } from './server/pdfGenerator.js';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Initialize Firebase Admin
-// In this environment, we attempt to initialize with default credentials
-// or skip if already initialized
-if (admin.apps.length === 0) {
-  admin.initializeApp({
-    projectId: 'ckdo-e-commerce' 
-  });
+// Initialize Firebase Admin dynamically
+try {
+  if (admin.apps.length === 0) {
+    let projectId = 'ckdo-e-commerce'; // Fallback
+    try {
+      const configPath = path.join(__dirname, 'firebase-applet-config.json');
+      if (fs.existsSync(configPath)) {
+        const config = JSON.parse(fs.readFileSync(configPath, 'utf8'));
+        projectId = config.projectId;
+      }
+    } catch (e) {
+      console.warn('Could not read firebase-applet-config.json, using fallback projectId');
+    }
+
+    admin.initializeApp({
+      projectId
+    });
+    console.log(`Firebase Admin initialized for project: ${projectId}`);
+  }
+} catch (error) {
+  console.error('Firebase Admin initialization failed:', error);
 }
 
 const db = admin.firestore();

@@ -15,11 +15,8 @@ import { Product } from '../types';
 export const productService = {
   // Listen to all active products for the client side
   subscribeToActiveProducts: (callback: (products: Product[]) => void, onError?: (error: any) => void) => {
-    // We'll try to order by createdAt, but we'll provide a fallback in case some docs lack it
-    const q = query(
-      collection(db, 'products')
-      // Removed mandatory orderBy here to avoid hidden failures if index/field is missing
-    );
+    // Listen directly to 'products' collection
+    const q = query(collection(db, 'products'));
     
     return onSnapshot(q, (snapshot) => {
       const products = snapshot.docs.map(doc => ({
@@ -27,10 +24,10 @@ export const productService = {
         ...doc.data()
       })) as unknown as Product[];
       
-      // Sort manually in JS as a safer fallback
+      // Sort manually in JS as a safer fallback (newest first)
       const sortedProducts = products.sort((a: any, b: any) => {
-        const dateA = a.createdAt?.seconds || 0;
-        const dateB = b.createdAt?.seconds || 0;
+        const dateA = a.createdAt?.seconds || (a.createdAt ? new Date(a.createdAt).getTime() / 1000 : 0);
+        const dateB = b.createdAt?.seconds || (b.createdAt ? new Date(b.createdAt).getTime() / 1000 : 0);
         return dateB - dateA;
       });
       
