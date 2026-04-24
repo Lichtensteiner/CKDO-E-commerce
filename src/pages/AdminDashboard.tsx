@@ -8,6 +8,7 @@ import {
   updateDoc, 
   addDoc, 
   deleteDoc, 
+  setDoc,
   getDocs,
   where,
   Timestamp,
@@ -194,6 +195,9 @@ export default function AdminDashboard({ user }: { user: UserProfile | null }) {
         activeProducts: active,
         expiringSoon: expiry
       }));
+    }, (error) => {
+      console.error("Erreur de souscription produits:", error);
+      alert("Erreur lors de la récupération des produits: " + error.message);
     });
 
     // Customers listener
@@ -599,7 +603,7 @@ function ProductsTab({ products, getExpiryStatus }: any) {
 
   const categoryMap: Record<string, string[]> = {
     'Produits alimentaires': ['Riz & céréales', 'Pâtes', 'Conserves', 'Condiments'],
-    'Boissons': ['Jus', 'Eaux', 'Boissons gazeuses'],
+    'Boissons': ['Jus', 'Eaux', 'Boissons gazeuses', 'Bière', 'Vin', 'Liqueur', 'Sirop'],
     'Produits frais': ['Viandes', 'Poissons', 'Produits laitiers'],
     'Fruits & légumes': ['Fruits', 'Légumes'],
     'Surgelés': ['Produits surgelés'],
@@ -1116,12 +1120,45 @@ function CustomersTab({ customers }: any) {
 function SettingsTab({ user }: any) {
   const { theme, toggleTheme } = useTheme();
   const [seeding, setSeeding] = useState(false);
+  const [migrating, setMigrating] = useState(false);
+
+  const migrateProducts = async () => {
+    setMigrating(true);
+    try {
+      console.log('Début de la migration de "products" vers "produits"...');
+      const snap = await getDocs(collection(db, 'products'));
+      console.log(`Nombre de produits trouvés dans l'ancienne collection: ${snap.size}`);
+      
+      if (snap.empty) {
+        alert("Aucun produit trouvé dans l'ancienne collection 'products'. Essayez d'importer la démo si vous n'avez pas de données.");
+        return;
+      }
+      
+      let count = 0;
+      for (const d of snap.docs) {
+        const data = d.data();
+        // Ensure we have a timestamp for ordering
+        if (!data.createdAt) {
+          data.createdAt = serverTimestamp();
+        }
+        await setDoc(doc(db, 'produits', d.id), data);
+        console.log(`Migré: ${d.id}`);
+        count++;
+      }
+      alert(`${count} produits migrés avec succès vers la nouvelle collection 'produits' !`);
+    } catch (err) {
+      console.error(err);
+      alert('Erreur de migration : ' + (err as Error).message);
+    } finally {
+      setMigrating(false);
+    }
+  };
 
   const seedProducts = async () => {
     setSeeding(true);
     try {
       for (const product of MOCK_PRODUCTS) {
-        await addDoc(collection(db, 'products'), {
+        await addDoc(collection(db, 'produits'), {
           ...product,
           isActive: true,
           stock: 100,
@@ -1237,15 +1274,28 @@ function SettingsTab({ user }: any) {
 
         <div className="bg-card-bg p-8 rounded-3xl border border-border-subtle shadow-sm space-y-6">
           <h3 className="text-xl font-black flex items-center gap-2 text-red-500">
-            <AlertCircle className="h-5 w-5" /> Maintenance
+            <AlertCircle className="h-5 w-5" /> Maintenance & Données
           </h3>
-          <button 
-            onClick={seedProducts}
-            disabled={seeding}
-            className="w-full py-4 border-2 border-dashed border-red-100 text-red-500 font-bold rounded-2xl hover:bg-red-50 transition-all disabled:opacity-50 text-sm"
-          >
-            {seeding ? 'Réinitialisation...' : 'Réinitialiser / Importer Démo'}
-          </button>
+          <div className="space-y-4">
+            <button 
+              onClick={migrateProducts}
+              disabled={migrating}
+              className="w-full py-4 bg-brand-blue text-white font-bold rounded-2xl hover:bg-brand-blue/90 transition-all disabled:opacity-50 text-sm shadow-lg shadow-brand-blue/20"
+            >
+              {migrating ? 'Migration en cours...' : '1. Migrer les anciens produits'}
+            </button>
+            <p className="text-[10px] text-gray-400 text-center px-4">Utilisez ce bouton si vos produits ne s'affichent plus suite au changement de langue.</p>
+            
+            <div className="pt-4 border-t border-border-subtle">
+              <button 
+                onClick={seedProducts}
+                disabled={seeding}
+                className="w-full py-4 border-2 border-dashed border-red-100 text-red-500 font-bold rounded-2xl hover:bg-red-50 transition-all disabled:opacity-50 text-sm"
+              >
+                {seeding ? 'Réinitialisation...' : '2. Réinitialiser / Importer Démo'}
+              </button>
+            </div>
+          </div>
         </div>
       </div>
     </div>

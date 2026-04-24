@@ -52,7 +52,7 @@ export default function ProductDetail({ onAddToCart, user }: { onAddToCart: (p: 
       window.scrollTo(0, 0);
       try {
         // Try Firestore first
-        const docRef = doc(db, 'products', id || '');
+        const docRef = doc(db, 'produits', id || '');
         const docSnap = await getDoc(docRef);
 
         let currentProduct = null;
@@ -67,7 +67,7 @@ export default function ProductDetail({ onAddToCart, user }: { onAddToCart: (p: 
           setProduct(currentProduct);
           // Fetch related
           const q = query(
-            collection(db, 'products'), 
+            collection(db, 'produits'), 
             where('category', '==', currentProduct.category)
           );
           const relatedSnap = await getDocs(q);

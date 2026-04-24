@@ -45,6 +45,38 @@ export const MOCK_PRODUCTS = [
     subCategory: 'Eaux', 
     imageUrl: 'https://images.unsplash.com/photo-1560023907-5f339d61e3c7?auto=format&fit=crop&q=80&w=600'
   },
+  { 
+    id: 'drink-beer-1', 
+    name: 'Bière Régab 65cl', 
+    price: 1000, 
+    category: 'Boissons', 
+    subCategory: 'Bière', 
+    imageUrl: 'https://images.unsplash.com/photo-1535958636474-b021ee887b13?auto=format&fit=crop&q=80&w=600'
+  },
+  { 
+    id: 'drink-wine-1', 
+    name: 'Vin Rouge Baron de Lestac', 
+    price: 8500, 
+    category: 'Boissons', 
+    subCategory: 'Vin', 
+    imageUrl: 'https://images.unsplash.com/photo-1510812431401-41d2bd2722f3?auto=format&fit=crop&q=80&w=600'
+  },
+  { 
+    id: 'drink-liq-1', 
+    name: 'Liqueur Baileys 70cl', 
+    price: 15000, 
+    category: 'Boissons', 
+    subCategory: 'Liqueur', 
+    imageUrl: 'https://images.unsplash.com/photo-1569058242252-6232490ec9a4?auto=format&fit=crop&q=80&w=600'
+  },
+  { 
+    id: 'drink-sirop-1', 
+    name: 'Sirop Grenadine Teisseire', 
+    price: 3500, 
+    category: 'Boissons', 
+    subCategory: 'Sirop', 
+    imageUrl: 'https://images.unsplash.com/photo-1622597467827-0bb129faea51?auto=format&fit=crop&q=80&w=600'
+  },
 
   // --- PRODUITS FRAIS ---
   { 

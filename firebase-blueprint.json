@@ -111,7 +111,7 @@
       "schema": "Category",
       "description": "Catégories de produits"
     },
-    "/products/{productId}": {
+    "/produits/{productId}": {
       "schema": "Product",
       "description": "Catalogue produits"
     },

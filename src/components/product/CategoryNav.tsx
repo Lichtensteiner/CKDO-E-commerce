@@ -34,7 +34,7 @@ const CATEGORIES: Category[] = [
     id: 'drinks', 
     name: 'Boissons', 
     icon: <GlassWater className="w-5 h-5" />, 
-    subCategories: ['Jus', 'Eaux', 'Boissons gazeuses'] 
+    subCategories: ['Jus', 'Eaux', 'Boissons gazeuses', 'Bière', 'Vin', 'Liqueur', 'Sirop'] 
   },
   { 
     id: 'fresh', 
