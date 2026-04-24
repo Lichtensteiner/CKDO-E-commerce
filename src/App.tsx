@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
 import Header from './components/layout/Header';
 import MobileNav from './components/layout/MobileNav';
+import Footer from './components/layout/Footer';
 import Home from './pages/Home';
 import ProductList from './pages/ProductList';
 import Cart from './pages/Cart';
@@ -10,6 +11,9 @@ import Profile from './pages/Profile';
 import ProductDetail from './pages/ProductDetail';
 import Login from './pages/Login';
 import AdminDashboard from './pages/AdminDashboard';
+import PrivacyPolicy from './pages/PrivacyPolicy';
+import TermsOfService from './pages/TermsOfService';
+import LegalNotice from './pages/LegalNotice';
 import LiveOrderTracker from './components/orders/LiveOrderTracker';
 import AIAssistant from './components/AIAssistant';
 import SidebarDrawer from './components/layout/SidebarDrawer';
@@ -194,10 +198,14 @@ function AppContent({
           <Route path="/product/:id" element={<ProductDetail onAddToCart={addToCart} user={user} catalog={globalProducts} />} />
           <Route path="/profile" element={<Profile user={user} onAddToCart={addToCart} setCart={setCart} catalog={globalProducts} />} />
           <Route path="/login" element={<Login />} />
+          <Route path="/confidentialite" element={<PrivacyPolicy />} />
+          <Route path="/conditions" element={<TermsOfService />} />
+          <Route path="/mentions-legales" element={<LegalNotice />} />
           <Route path="/admin/*" element={user?.role === 'admin' ? <AdminDashboard user={user} /> : <Login />} />
         </Routes>
       </main>
 
+      {!isAdminPath && <Footer />}
       {!isAdminPath && <MobileNav cartCount={cart.reduce((acc: number, item: any) => acc + item.quantity, 0)} />}
       {!isAdminPath && <AIAssistant catalog={globalProducts} onAddItemsToCart={addItemsToCart} />}
       {!isAdminPath && <LiveOrderTracker user={user} />}

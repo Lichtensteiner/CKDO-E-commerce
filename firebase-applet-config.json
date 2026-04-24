@@ -1,9 +1,10 @@
 {
-  "projectId": "ckdo-e-commerce",
-  "appId": "1:567806027710:web:0221e8e5fc576dedc33bef",
-  "apiKey": "AIzaSyAW06I2stcy0FeZRA3aFTxUSblMKSZT3mI",
-  "authDomain": "ckdo-e-commerce.firebaseapp.com",
-  "firestoreDatabaseId": "(default)",
-  "storageBucket": "ckdo-e-commerce.firebasestorage.app",
-  "messagingSenderId": "567806027710"
+  "projectId": "gen-lang-client-0311421007",
+  "appId": "1:1087444573472:web:46fae63de48651ca920b45",
+  "apiKey": "AIzaSyD3p2tNRkM2Y8UgrFyiq9odPOwIVHy8uME",
+  "authDomain": "gen-lang-client-0311421007.firebaseapp.com",
+  "firestoreDatabaseId": "ai-studio-bb28a082-44d9-4c2a-9731-f46ff2be9e4e",
+  "storageBucket": "gen-lang-client-0311421007.firebasestorage.app",
+  "messagingSenderId": "1087444573472",
+  "measurementId": ""
 }

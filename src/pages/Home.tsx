@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowRight, ShoppingBag, Clock, ShieldCheck, PhoneCall, Star } from 'lucide-react';
-import { motion } from 'motion/react';
+import { ArrowRight, ShoppingBag, Clock, ShieldCheck, PhoneCall, Star, Target, Zap, Heart } from 'lucide-react';
+import { motion, AnimatePresence } from 'motion/react';
 import { formatPrice } from '../lib/utils';
 import { Product } from '../types';
 import { productService } from '../services/productService';
@@ -24,21 +24,51 @@ export default function Home({ onAddToCart }: { onAddToCart: (p: Product) => voi
     { name: 'Surgelés', icon: '❄️', id: 'surgeles' },
   ];
 
+  const [currentSlide, setCurrentSlide] = useState(0);
+  const heroImages = [
+    "https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&q=80&w=1600",
+    "https://images.unsplash.com/photo-1578916171728-46686eac8d58?auto=format&fit=crop&q=80&w=1600",
+    "https://images.unsplash.com/photo-1604719312563-8912e9223c6a?auto=format&fit=crop&q=80&w=1600",
+    "https://images.unsplash.com/photo-1583258292688-d0213dc5a3a8?auto=format&fit=crop&q=80&w=1600",
+    "https://images.unsplash.com/photo-1516594798947-e65505dbb29d?auto=format&fit=crop&q=80&w=1600"
+  ];
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentSlide((prev) => (prev + 1) % heroImages.length);
+    }, 5000);
+    return () => clearInterval(timer);
+  }, [heroImages.length]);
+
   return (
     <div className="space-y-12 pb-20">
       {/* Hero Section */}
-      <section className="relative h-[400px] md:h-[500px] flex items-center overflow-hidden bg-brand-blue">
-        <div className="absolute inset-0 opacity-20">
-          <img 
-            src="https://picsum.photos/seed/grocery/1600/900" 
-            alt="Hero background" 
-            className="w-full h-full object-cover grayscale"
-            referrerPolicy="no-referrer"
-          />
+      <section className="relative h-[400px] md:h-[600px] flex items-center overflow-hidden bg-brand-blue">
+        {/* Background Slideshow */}
+        <div className="absolute inset-0 z-0">
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={currentSlide}
+              initial={{ opacity: 0, scale: 1.1 }}
+              animate={{ opacity: 0.35, scale: 1 }}
+              exit={{ opacity: 0, scale: 1.05 }}
+              transition={{ duration: 1.5, ease: "easeInOut" }}
+              className="absolute inset-0"
+            >
+              <img 
+                src={heroImages[currentSlide]} 
+                alt="Supermarket scene" 
+                className="w-full h-full object-cover"
+                referrerPolicy="no-referrer"
+              />
+            </motion.div>
+          </AnimatePresence>
+          <div className="absolute inset-0 bg-gradient-to-r from-brand-blue/80 via-brand-blue/40 to-transparent" />
         </div>
+
         <div className="container mx-auto px-4 relative z-10 text-white">
           <motion.div 
-            initial={{ opacity: 0, y: 20 }}
+            initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
             className="max-w-2xl space-y-6"
           >
@@ -143,30 +173,72 @@ export default function Home({ onAddToCart }: { onAddToCart: (p: Product) => voi
         )}
       </section>
 
-      {/* Trust Badges */}
-      <section className="bg-app-background py-12 border-y border-border-subtle">
+      {/* Mission & Vision Section */}
+      <section className="bg-app-background py-24 border-y border-border-subtle overflow-hidden">
         <div className="container mx-auto px-4">
-          <div className="grid md:grid-cols-3 gap-8 text-center">
-            <div className="space-y-4">
-              <div className="bg-card-bg h-16 w-16 rounded-2xl flex items-center justify-center mx-auto shadow-sm border border-border-subtle">
-                <Clock className="h-8 w-8 text-brand-green" />
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
+            <div className="space-y-8">
+              <div className="space-y-4">
+                <span className="text-[10px] font-black uppercase tracking-[0.4em] text-brand-blue bg-brand-blue/5 px-4 py-2 rounded-full">
+                  Notre Engagement
+                </span>
+                <h2 className="text-4xl md:text-5xl font-black text-app-text tracking-tighter leading-tight italic uppercase">
+                  Une Vision pour le Gabon.
+                </h2>
+                <p className="text-lg text-gray-500 font-medium leading-relaxed max-w-xl">
+                  Chez <strong>Ludo_Consulting</strong>, nous croyons que la technologie doit simplifier la vie. Notre mission est de transformer la façon dont vous accédez aux produits essentiels avec excellence.
+                </p>
               </div>
-              <h3 className="font-bold text-lg text-app-text">Click & Collect Rapide</h3>
-              <p className="text-gray-500">Récupérez votre commande en moins de 2h dans votre magasin CKDO préféré.</p>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                <div className="p-8 bg-card-bg rounded-[2.5rem] border border-border-subtle shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 group">
+                  <div className="w-14 h-14 bg-brand-blue/10 rounded-2xl flex items-center justify-center mb-6 group-hover:bg-brand-blue group-hover:text-white transition-colors">
+                    <Target size={28} />
+                  </div>
+                  <h3 className="text-lg font-black text-app-text mb-3 uppercase tracking-tight">Notre Mission</h3>
+                  <p className="text-sm text-gray-400 font-medium leading-relaxed">
+                    Offrir une plateforme de commerce fluide, sécurisée et ultra-rapide pour tous les Gabonais, partout et tout le temps.
+                  </p>
+                </div>
+
+                <div className="p-8 bg-card-bg rounded-[2.5rem] border border-border-subtle shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 group">
+                  <div className="w-14 h-14 bg-brand-red/10 rounded-2xl flex items-center justify-center mb-6 group-hover:bg-brand-red group-hover:text-white transition-colors">
+                    <ShieldCheck size={28} />
+                  </div>
+                  <h3 className="text-lg font-black text-app-text mb-3 uppercase tracking-tight">Nos Valeurs</h3>
+                  <p className="text-sm text-gray-400 font-medium leading-relaxed">
+                    Transparence totale, respect des données utilisateurs et excellence dans le service client sont au cœur de notre ADN.
+                  </p>
+                </div>
+              </div>
             </div>
-            <div className="space-y-4">
-              <div className="bg-card-bg h-16 w-16 rounded-2xl flex items-center justify-center mx-auto shadow-sm border border-border-subtle">
-                <ShieldCheck className="h-8 w-8 text-brand-green" />
-              </div>
-              <h3 className="font-bold text-lg text-app-text">Paiement Sécurisé</h3>
-              <p className="text-gray-500">Payez en Mobile Money (Airtel/Moov) ou par Carte Bancaire en toute confiance.</p>
-            </div>
-            <div className="space-y-4">
-              <div className="bg-card-bg h-16 w-16 rounded-2xl flex items-center justify-center mx-auto shadow-sm border border-border-subtle">
-                <PhoneCall className="h-8 w-8 text-brand-green" />
-              </div>
-              <h3 className="font-bold text-lg text-app-text">Service Client Local</h3>
-              <p className="text-gray-500">Une équipe dédiée basée au Gabon pour vous accompagner dans vos achats.</p>
+
+            <div className="relative">
+              <motion.div 
+                initial={{ opacity: 0, scale: 0.8 }}
+                whileInView={{ opacity: 1, scale: 1 }}
+                viewport={{ once: true }}
+                className="relative z-10"
+              >
+                <div className="absolute -inset-4 bg-brand-blue/5 rounded-[4rem] -rotate-3" />
+                <img 
+                  src="https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&q=80&w=1000" 
+                  alt="Grocery selection" 
+                  className="relative rounded-[3rem] w-full aspect-[4/5] object-cover shadow-2xl"
+                  referrerPolicy="no-referrer"
+                />
+                <div className="absolute -bottom-8 -right-8 bg-white p-8 rounded-[2.5rem] shadow-2xl border border-gray-100 hidden sm:block">
+                  <div className="flex items-center gap-4">
+                    <div className="p-3 bg-brand-green text-white rounded-2xl">
+                      <Heart size={24} />
+                    </div>
+                    <div>
+                      <p className="text-2xl font-black text-app-text">100%</p>
+                      <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest leading-none">Passionné</p>
+                    </div>
+                  </div>
+                </div>
+              </motion.div>
             </div>
           </div>
         </div>

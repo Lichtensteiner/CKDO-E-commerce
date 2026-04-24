@@ -198,7 +198,7 @@ export default function AdminDashboard({ user }: { user: UserProfile | null }) {
       }));
     }, (error) => {
       console.error("Erreur de souscription produits:", error);
-      alert("Erreur lors de la récupération des produits: " + error.message);
+      // Removed alert to avoid intrusive popups if auth is still initializing
     });
 
     // Customers listener
