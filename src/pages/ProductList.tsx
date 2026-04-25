@@ -15,31 +15,72 @@ export default function ProductList({ onAddToCart }: { onAddToCart: (p: Product)
   const [sortBy, setSortBy] = useState<'price-asc' | 'price-desc' | 'newest'>('newest');
 
   useEffect(() => {
+    console.log("[ProductList] Mounting component and subscribing...");
     const unsub = productService.subscribeToActiveProducts((fetched) => {
-      console.log(`[ProductList] Fetched ${fetched.length} products total.`);
-      // Show all products to debug visibility issues
+      console.log(`[ProductList] Snapshot received: ${fetched.length} products total.`);
+      if (fetched.length > 0) {
+        console.log("[ProductList] First product sample:", JSON.stringify(fetched[0]).substring(0, 200));
+      }
       setProducts(fetched);
       setLoadingProducts(false);
     });
-    return () => unsub();
+    return () => {
+      console.log("[ProductList] Unmounting and unsubscribing.");
+      unsub();
+    };
   }, []);
 
+  const normalize = (s: string) => s ? s.toLowerCase()
+    .trim()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "") // Remove accents
+    .replace(/&/g, 'and')
+    .replace(/\s+/g, ' ') : '';
+
   const filteredProducts = products.filter((p) => {
-    const matchesRayon = selectedRayon === 'Tous' || p.category === selectedRayon;
-    
-    const matchesSubCat = selectedSubCat === 'Tous' || 
-                         p.subCategory === selectedSubCat ||
-                         (!p.subCategory && p.name.toLowerCase().includes(selectedSubCat.split(' ')[0].toLowerCase()));
-                         
-    const matchesSearch = p.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                         p.description.toLowerCase().includes(searchQuery.toLowerCase());
-    
-    return matchesRayon && matchesSubCat && matchesSearch;
+    try {
+      if (!p) return false;
+      
+      const pName = normalize(p.name);
+      const pDesc = normalize(p.description);
+      const pCat = normalize(p.category);
+      const pSubCat = normalize(p.subCategory || '');
+      const pDataId = normalize((p as any).dataId || '');
+
+      const matchesRayon = selectedRayon === 'Tous' || 
+                           pCat === normalize(selectedRayon);
+      
+      const targetSubCat = normalize(selectedSubCat);
+      const matchesSubCat = selectedSubCat === 'Tous' || 
+                           pSubCat === targetSubCat ||
+                           (!pSubCat && pName.includes(targetSubCat.split(' ')[0]));
+                           
+      const search = normalize(searchQuery);
+      const matchesSearch = !search || 
+                           pName.includes(search) || 
+                           pDesc.includes(search) ||
+                           pDataId.includes(search);
+      
+      return matchesRayon && matchesSubCat && matchesSearch;
+    } catch (err) {
+      console.error("[ProductList] Filter critial error:", err);
+      return false;
+    }
   }).sort((a, b) => {
-    if (sortBy === 'price-asc') return a.price - b.price;
-    if (sortBy === 'price-desc') return b.price - a.price;
-    return 0; // Keeping newest by default (as matched in DB order mostly)
+    try {
+      if (sortBy === 'price-asc') return (a.price || 0) - (b.price || 0);
+      if (sortBy === 'price-desc') return (b.price || 0) - (a.price || 0);
+      return 0;
+    } catch (err) {
+      return 0;
+    }
   });
+
+  console.log(`[ProductList] Render: ${products.length} in state, ${filteredProducts.length} after filter.`);
+  if (products.length > 0) {
+    const uniqueCats = Array.from(new Set(products.map(p => p.category || 'Sans catégorie')));
+    console.log("[ProductList] Categories present in DB:", uniqueCats);
+  }
 
   const handleSelectNav = (rayon: string, subCat: string) => {
     setSelectedRayon(rayon);
@@ -107,14 +148,21 @@ export default function ProductList({ onAddToCart }: { onAddToCart: (p: Product)
             className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4 md:gap-6"
           >
             <AnimatePresence>
-              {filteredProducts.map((product) => (
-                <div key={product.id}>
-                  <ProductCard 
-                    product={product} 
-                    onAddToCart={onAddToCart} 
-                  />
-                </div>
-              ))}
+              {filteredProducts.map((product) => {
+                try {
+                  return (
+                    <div key={product.id}>
+                      <ProductCard 
+                        product={product} 
+                        onAddToCart={onAddToCart} 
+                      />
+                    </div>
+                  );
+                } catch (err) {
+                  console.error(`[ProductList] Error rendering product ${product.id}:`, err);
+                  return null;
+                }
+              })}
             </AnimatePresence>
           </motion.div>
         ) : (

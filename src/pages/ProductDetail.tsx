@@ -62,16 +62,29 @@ export default function ProductDetail({
       setLoading(true);
       window.scrollTo(0, 0);
       try {
-        // Try Firestore first
-        const docRef = doc(db, 'products', id || '');
-        const docSnap = await getDoc(docRef);
+        console.log(`[ProductDetail] Fetching product: ${id}`);
+        // 1. Try local catalog first (it might already be in memory with slug matching)
+        let currentProduct = catalog.find(p => p.id === id || p.dataId === id);
 
-        let currentProduct = null;
-        if (docSnap.exists()) {
-          currentProduct = { id: docSnap.id, ...docSnap.data() };
-        } else {
-          // Try Mock
-          currentProduct = MOCK_PRODUCTS.find(p => p.id === id);
+        if (!currentProduct) {
+          // 2. Try Firestore direct ID
+          const docRef = doc(db, 'products', id || '');
+          const docSnap = await getDoc(docRef);
+
+          if (docSnap.exists()) {
+            currentProduct = { id: docSnap.id, ...docSnap.data() };
+          } else {
+            // 3. Try Firestore query by dataId (slug)
+            const q = query(collection(db, 'products'), where('id', '==', id));
+            const querySnap = await getDocs(q);
+            if (!querySnap.empty) {
+              const d = querySnap.docs[0];
+              currentProduct = { id: d.id, ...d.data() };
+            } else {
+              // 4. Try Mock as last resort
+              currentProduct = MOCK_PRODUCTS.find(p => p.id === id);
+            }
+          }
         }
 
         if (currentProduct) {
@@ -93,7 +106,7 @@ export default function ProductDetail({
           }
         }
       } catch (err) {
-        console.error(err);
+        console.error("[ProductDetail] Error:", err);
       } finally {
         setLoading(false);
       }

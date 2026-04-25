@@ -15,7 +15,7 @@ import {
   serverTimestamp 
 } from 'firebase/firestore';
 import { db, auth } from '../lib/firebase';
-import { Order, UserProfile } from '../types';
+import { Order, UserProfile, OrderStatus } from '../types';
 import { formatPrice } from '../lib/utils';
 import { 
   LayoutDashboard, 
@@ -166,7 +166,10 @@ export default function AdminDashboard({ user }: { user: UserProfile | null }) {
       }
       initialLoad = false;
       setOrders(ordersData);
-      const revenue = ordersData.reduce((acc, o) => acc + (o.status !== 'cancelled' ? o.totalAmount : 0), 0);
+      const revenue = ordersData.reduce((acc, o) => {
+        const val = typeof o.totalAmount === 'number' ? o.totalAmount : parseFloat(o.totalAmount as any) || 0;
+        return acc + (o.status !== 'cancelled' ? val : 0);
+      }, 0);
       const pending = ordersData.filter(o => o.status === 'pending').length;
       setStats(prev => ({ 
         ...prev, 
@@ -207,8 +210,13 @@ export default function AdminDashboard({ user }: { user: UserProfile | null }) {
       setStats(prev => ({ ...prev, totalCustomers: customersData.length }));
     });
 
-    setLoading(false);
+    // We only set loading to false AFTER setting initial state OR after a timeout
+    const timer = setTimeout(() => {
+      setLoading(false);
+    }, 1500);
+
     return () => {
+      clearTimeout(timer);
       unsubOrders();
       unsubProducts();
       unsubCustomers();
@@ -217,7 +225,12 @@ export default function AdminDashboard({ user }: { user: UserProfile | null }) {
 
   const handleLogout = () => auth.signOut();
 
-  if (loading) return <div className="h-screen flex items-center justify-center">Chargement...</div>;
+  if (loading) return (
+    <div className="h-screen flex flex-col items-center justify-center bg-app-background gap-4">
+      <div className="w-12 h-12 border-4 border-brand-blue border-t-transparent rounded-full animate-spin"></div>
+      <p className="font-bold text-gray-500 animate-pulse uppercase tracking-widest text-[10px]">Chargement des données...</p>
+    </div>
+  );
 
   return (
     <div className="min-h-screen bg-app-background flex transition-colors duration-300 relative overflow-hidden">
@@ -668,39 +681,71 @@ function ProductsTab({ products, getExpiryStatus }: any) {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
+    console.log("[AdminDashboard] Submitting form...", formData);
     try {
       if (editingProduct) {
+        console.log("[AdminDashboard] Mode: Edit", editingProduct.id);
         const { id, ...updates } = formData as any;
         await productService.updateProduct(editingProduct.id, updates);
       } else {
+        console.log("[AdminDashboard] Mode: Add New");
         await productService.addProduct(formData as any);
       }
       setShowModal(false);
       resetForm();
-    } catch (error) {
-      console.error(error);
-      alert("Erreur lors de l'enregistrement");
+    } catch (error: any) {
+      console.error("[AdminDashboard] Submission error:", error);
+      alert(`Erreur lors de l'enregistrement: ${error.message || 'Erreur inconnue'}`);
     } finally {
       setLoading(false);
     }
   };
 
+  const handleSyncDatabase = async () => {
+    if (window.confirm('Voulez-vous synchroniser et unifier la base de données ? Cela déplacera tous les anciens produits vers la nouvelle collection.')) {
+      setLoading(true);
+      try {
+        await productService.migrateProduitsToProducts();
+        alert('Synchronisation terminée avec succès !');
+      } catch (err) {
+        console.error(err);
+        alert('Erreur lors de la synchronisation');
+      } finally {
+        setLoading(false);
+      }
+    }
+  };
+
   const handleDelete = async (id: string) => {
     if (window.confirm('Supprimer ce produit ?')) {
-      await productService.deleteProduct(id);
+      try {
+        await productService.deleteProduct(id);
+        console.log("[AdminDashboard] Product deleted:", id);
+      } catch (err: any) {
+        console.error("[AdminDashboard] Delete error:", err);
+        alert(`Erreur lors de la suppression: ${err.message}`);
+      }
     }
   };
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <h3 className="text-2xl font-black text-app-text tracking-tighter">Gestion du Catalogue</h3>
-        <button 
-          onClick={() => { resetForm(); setShowModal(true); }}
-          className="btn-primary px-8 py-4 rounded-[2rem] flex items-center gap-2 font-black uppercase text-[10px] tracking-widest shadow-xl shadow-brand-blue/20"
-        >
-          <Plus className="h-5 w-5" /> Nouveau Produit
-        </button>
+        <div className="flex items-center gap-3 w-full sm:w-auto">
+          <button 
+            onClick={handleSyncDatabase}
+            className="flex-1 sm:flex-none px-6 py-4 bg-emerald-50 text-emerald-600 rounded-2xl flex items-center justify-center gap-2 font-black uppercase text-[10px] tracking-widest hover:bg-emerald-600 hover:text-white transition-all shadow-sm"
+          >
+            <ShieldCheck size={16} /> Sync DB
+          </button>
+          <button 
+            onClick={() => { resetForm(); setShowModal(true); }}
+            className="flex-1 sm:flex-none btn-primary px-8 py-4 rounded-[2rem] flex items-center justify-center gap-2 font-black uppercase text-[10px] tracking-widest shadow-xl shadow-brand-blue/20"
+          >
+            <Plus className="h-5 w-5" /> Nouveau
+          </button>
+        </div>
       </div>
 
       <div className="bg-card-bg rounded-[2.5rem] border border-border-subtle shadow-sm overflow-hidden">
@@ -717,64 +762,78 @@ function ProductsTab({ products, getExpiryStatus }: any) {
               </tr>
             </thead>
             <tbody className="divide-y divide-border-subtle">
-              {products.map((p: any) => {
-                const expiryStatus = getExpiryStatus(p.expiryDate);
-                return (
-                  <tr key={p.id} className="hover:bg-app-background transition-colors group">
-                    <td className="px-6 py-5">
-                      <div className="flex items-center gap-4">
-                        <img src={p.imageUrl} alt={p.name} className="w-14 h-14 rounded-2xl object-cover shadow-sm group-hover:scale-105 transition-transform" />
-                        <div>
-                          <p className="font-black text-app-text tracking-tight uppercase text-sm">{p.name}</p>
-                          <p className={`text-[9px] font-black uppercase tracking-widest ${p.isActive ? 'text-emerald-500' : 'text-red-500'}`}>
-                            {p.isActive ? 'Actif' : 'Masqué'}
-                          </p>
+              {products.length === 0 ? (
+                <tr>
+                  <td colSpan={6} className="px-6 py-20 text-center">
+                    <div className="flex flex-col items-center gap-4 opacity-30">
+                      <Search className="h-12 w-12" />
+                      <div>
+                        <p className="text-sm font-black uppercase tracking-widest">Aucun produit trouvé</p>
+                        <p className="text-xs">Cliquez sur 'Nouveau' pour enrichir votre catalogue</p>
+                      </div>
+                    </div>
+                  </td>
+                </tr>
+              ) : (
+                products.map((p: any) => {
+                  const expiryStatus = getExpiryStatus(p.expiryDate);
+                  return (
+                    <tr key={p.id} className="hover:bg-app-background transition-colors group">
+                      <td className="px-6 py-5">
+                        <div className="flex items-center gap-4">
+                          <img src={p.imageUrl} alt={p.name} className="w-14 h-14 rounded-2xl object-cover shadow-sm group-hover:scale-105 transition-transform" />
+                          <div>
+                            <p className="font-black text-app-text tracking-tight uppercase text-sm">{p.name}</p>
+                            <p className={`text-[9px] font-black uppercase tracking-widest ${p.isActive ? 'text-emerald-500' : 'text-red-500'}`}>
+                              {p.isActive ? 'Actif' : 'Masqué'}
+                            </p>
+                          </div>
                         </div>
-                      </div>
-                    </td>
-                    <td className="px-6 py-5">
-                      <span className="text-[10px] font-black uppercase tracking-widest text-gray-400">{p.category}</span>
-                    </td>
-                    <td className="px-6 py-5">
-                      <div className="flex flex-col">
-                        <span className="font-black text-brand-blue">{formatPrice(p.price)}</span>
-                        {p.isPromo && <span className="text-[10px] text-brand-red font-black line-through opacity-50">{formatPrice(p.price + 500)}</span>}
-                      </div>
-                    </td>
-                    <td className="px-6 py-5">
-                      <span className={`text-sm font-black ${p.stock < 10 ? 'text-red-500' : 'text-app-text'}`}>
-                        {p.stock} <span className="text-[10px] opacity-30">unités</span>
-                      </span>
-                    </td>
-                    <td className="px-6 py-5">
-                       {p.expiryDate ? (
-                         <div className={`px-3 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-widest inline-flex items-center gap-2 ${statusColors[expiryStatus]}`}>
-                            <Clock size={12} />
-                            {new Date(p.expiryDate).toLocaleDateString('fr-FR')}
-                         </div>
-                       ) : (
-                         <span className="text-[10px] text-gray-300 font-bold italic">N/A</span>
-                       )}
-                    </td>
-                    <td className="px-6 py-5">
-                      <div className="flex justify-center gap-3">
-                        <button 
-                          onClick={() => { setEditingProduct(p); setFormData(p); setShowModal(true); }}
-                          className="p-3 bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white rounded-[1rem] transition-all"
-                        >
-                          <Edit2 className="h-4 w-4" />
-                        </button>
-                        <button 
-                          onClick={() => handleDelete(p.id)}
-                          className="p-3 bg-red-50 text-red-600 hover:bg-red-600 hover:text-white rounded-[1rem] transition-all"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })}
+                      </td>
+                      <td className="px-6 py-5">
+                        <span className="text-[10px] font-black uppercase tracking-widest text-gray-400">{p.category}</span>
+                      </td>
+                      <td className="px-6 py-5">
+                        <div className="flex flex-col">
+                          <span className="font-black text-brand-blue">{formatPrice(p.price)}</span>
+                          {p.isPromo && <span className="text-[10px] text-brand-red font-black line-through opacity-50">{formatPrice(p.price + 500)}</span>}
+                        </div>
+                      </td>
+                      <td className="px-6 py-5">
+                        <span className={`text-sm font-black ${p.stock < 10 ? 'text-red-500' : 'text-app-text'}`}>
+                          {p.stock} <span className="text-[10px] opacity-30">unités</span>
+                        </span>
+                      </td>
+                      <td className="px-6 py-5">
+                         {p.expiryDate ? (
+                           <div className={`px-3 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-widest inline-flex items-center gap-2 ${statusColors[expiryStatus]}`}>
+                              <Clock size={12} />
+                              {new Date(p.expiryDate).toLocaleDateString('fr-FR')}
+                           </div>
+                         ) : (
+                           <span className="text-[10px] text-gray-300 font-bold italic">N/A</span>
+                         )}
+                      </td>
+                      <td className="px-6 py-5">
+                        <div className="flex justify-center gap-3">
+                          <button 
+                            onClick={() => { setEditingProduct(p); setFormData(p); setShowModal(true); }}
+                            className="p-3 bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white rounded-[1rem] transition-all"
+                          >
+                            <Edit2 className="h-4 w-4" />
+                          </button>
+                          <button 
+                            onClick={() => handleDelete(p.id)}
+                            className="p-3 bg-red-50 text-red-600 hover:bg-red-600 hover:text-white rounded-[1rem] transition-all"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
             </tbody>
           </table>
         </div>
@@ -976,11 +1035,13 @@ function ProductsTab({ products, getExpiryStatus }: any) {
 }
 
 function OrdersTab({ orders, onOpenInvoice }: any) {
-  const updateStatus = async (id: string, status: string) => {
-    await updateDoc(doc(db, 'orders', id), { 
-      status, 
-      updatedAt: new Date().toISOString() 
-    });
+  const updateStatus = async (id: string, status: OrderStatus) => {
+    try {
+      await orderService.updateOrderStatus(id, status);
+    } catch (err: any) {
+      console.error("[OrdersTab] Status update failed:", err);
+      alert("Erreur lors de la mise à jour: " + err.message);
+    }
   };
 
   const [filter, setFilter] = useState('all');
@@ -1006,76 +1067,96 @@ function OrdersTab({ orders, onOpenInvoice }: any) {
       </div>
 
       <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {filtered.map((order: any) => (
-          <div key={order.id} className="bg-card-bg rounded-3xl border border-border-subtle shadow-sm overflow-hidden flex flex-col hover:border-brand-blue/20 transition-all group">
-            <div className="p-6 border-b border-border-subtle flex justify-between items-start">
-              <div>
-                <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">#{order.id.slice(0,8)}</p>
-                <p className="text-xs font-bold text-gray-400">
-                  {order.createdAt && (order.createdAt as any).seconds 
-                    ? new Date((order.createdAt as any).seconds * 1000).toLocaleDateString()
-                    : new Date(order.createdAt).toLocaleDateString()
-                  }
-                </p>
-              </div>
-              <span className={`px-2 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest ${
-                order.status === 'delivered' ? 'bg-green-500/10 text-green-500' : 
-                order.status === 'paid' ? 'bg-brand-blue/10 text-brand-blue' : 'bg-amber-500/10 text-amber-500'
-              }`}>
-                {order.status}
-              </span>
-            </div>
-            
-            <div className="p-6 flex-1 space-y-4">
-              <div className="space-y-2">
-                {order.items.map((item: any, i: number) => (
-                  <div key={i} className="flex justify-between text-sm">
-                    <span className="text-gray-400 font-medium">{item.quantity}x {item.name}</span>
-                    <span className="text-gray-400">{formatPrice(item.price * item.quantity)}</span>
-                  </div>
-                ))}
-              </div>
-              <div className="flex justify-between items-center pt-4 border-t border-border-subtle">
-                <span className="font-bold text-gray-400 text-sm italic">{order.paymentMethod === 'momov' ? 'Airtel Money' : 'Cash'}</span>
-                <span className="font-black text-app-text">{formatPrice(order.totalAmount)}</span>
-              </div>
-            </div>
-
-            <div className="p-4 bg-app-background border-t border-border-subtle flex flex-col gap-2">
-                <button 
-                  onClick={() => onOpenInvoice(order)}
-                  className="w-full py-2 bg-card-bg border border-border-subtle text-app-text rounded-xl text-[10px] font-bold uppercase tracking-wider shadow-sm flex items-center justify-center gap-2 hover:bg-brand-blue hover:text-white transition-all"
-                >
-                  <FileText size={14} /> Voir Facture
-                </button>
-                
-                <div className="grid grid-cols-2 gap-2">
-                  {(order.status === 'paid' || order.status === 'pending') && (
-                    <>
-                      <button 
-                        onClick={() => updateStatus(order.id, 'preparing')} 
-                        className="py-2 bg-brand-blue text-white rounded-xl text-[10px] font-bold uppercase tracking-wider shadow-sm"
-                      >
-                        Préparer
-                      </button>
-                      <button 
-                        onClick={() => updateStatus(order.id, 'cancelled')} 
-                        className="py-2 bg-card-bg border border-red-500/20 text-red-500 rounded-xl text-[10px] font-bold uppercase tracking-wider shadow-sm hover:bg-red-500/10 transition-colors"
-                      >
-                        Refuser
-                      </button>
-                    </>
-                  )}
-                  {order.status === 'preparing' && (
-                    <button onClick={() => updateStatus(order.id, 'ready')} className="col-span-2 py-2 bg-purple-600 text-white rounded-xl text-[10px] font-bold uppercase tracking-wider">Prête</button>
-                  )}
-                  {order.status === 'ready' && (
-                    <button onClick={() => updateStatus(order.id, 'delivered')} className="col-span-2 py-2 bg-green-600 text-white rounded-xl text-[10px] font-bold uppercase tracking-wider">Livrer</button>
-                  )}
-                </div>
+        {filtered.length === 0 ? (
+          <div className="col-span-full py-20 bg-card-bg rounded-3xl border border-border-subtle border-dashed flex flex-col items-center justify-center gap-4 text-center">
+            <ShoppingCart className="h-16 w-16 text-gray-200" />
+            <div>
+              <p className="text-sm font-black uppercase tracking-widest text-gray-400">Aucune commande</p>
+              <p className="text-xs text-gray-300">Les commandes de vos clients apparaîtront ici</p>
             </div>
           </div>
-        ))}
+        ) : (
+          filtered.map((order: any) => (
+            <div key={order.id} className="bg-card-bg rounded-3xl border border-border-subtle shadow-sm overflow-hidden flex flex-col hover:border-brand-blue/20 transition-all group">
+              <div className="p-6 border-b border-border-subtle flex justify-between items-start">
+                <div>
+                  <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">#{order.id.slice(0,8)}</p>
+                  <p className="text-xs font-bold text-gray-400">
+                    {order.createdAt && (order.createdAt as any).seconds 
+                      ? new Date((order.createdAt as any).seconds * 1000).toLocaleDateString()
+                      : new Date(order.createdAt).toLocaleDateString()
+                    }
+                  </p>
+                </div>
+                <span className={`px-2 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest ${
+                  order.status === 'delivered' ? 'bg-green-500/10 text-green-500' : 
+                  order.status === 'paid' ? 'bg-brand-blue/10 text-brand-blue' : 'bg-amber-500/10 text-amber-500'
+                }`}>
+                  {order.status}
+                </span>
+              </div>
+              
+              <div className="p-6 flex-1 space-y-4">
+                <div className="space-y-2">
+                  {order.items.map((item: any, i: number) => (
+                    <div key={i} className="flex justify-between text-sm">
+                      <span className="text-gray-400 font-medium">{item.quantity}x {item.name}</span>
+                      <span className="text-gray-400">{formatPrice(item.price * item.quantity)}</span>
+                    </div>
+                  ))}
+                </div>
+                <div className="flex justify-between items-center pt-4 border-t border-border-subtle">
+                  <span className="font-bold text-gray-400 text-sm italic">{order.paymentMethod === 'momov' ? 'Airtel Money' : 'Cash'}</span>
+                  <span className="font-black text-app-text">{formatPrice(order.totalAmount)}</span>
+                </div>
+              </div>
+
+              <div className="p-4 bg-app-background border-t border-border-subtle flex flex-col gap-2">
+                  <button 
+                    onClick={() => onOpenInvoice(order)}
+                    className="w-full py-2 bg-card-bg border border-border-subtle text-app-text rounded-xl text-[10px] font-bold uppercase tracking-wider shadow-sm flex items-center justify-center gap-2 hover:bg-brand-blue hover:text-white transition-all"
+                  >
+                    <FileText size={14} /> Voir Facture
+                  </button>
+                  
+                  <div className="grid grid-cols-2 gap-2">
+                    {(order.status === 'paid' || order.status === 'pending') && (
+                      <>
+                        <button 
+                          onClick={() => updateStatus(order.id, 'preparing')} 
+                          className="py-2 bg-brand-blue text-white rounded-xl text-[10px] font-bold uppercase tracking-wider shadow-sm transition-all"
+                        >
+                          Préparer
+                        </button>
+                        <button 
+                          onClick={() => updateStatus(order.id, 'cancelled')} 
+                          className="py-2 bg-card-bg border border-red-500/20 text-red-500 rounded-xl text-[10px] font-bold uppercase tracking-wider shadow-sm hover:bg-red-500/10 transition-all"
+                        >
+                          Refuser
+                        </button>
+                      </>
+                    )}
+                    {order.status === 'preparing' && (
+                      <button 
+                        onClick={() => updateStatus(order.id, 'ready')} 
+                        className="col-span-2 py-2 bg-purple-600 text-white rounded-xl text-[10px] font-bold uppercase tracking-wider shadow-lg hover:bg-purple-700 transition-all"
+                      >
+                        Prête
+                      </button>
+                    )}
+                    {order.status === 'ready' && (
+                      <button 
+                        onClick={() => updateStatus(order.id, 'delivered')} 
+                        className="col-span-2 py-2 bg-green-600 text-white rounded-xl text-[10px] font-bold uppercase tracking-wider shadow-lg hover:bg-green-700 transition-all"
+                      >
+                        Livrer
+                      </button>
+                    )}
+                  </div>
+              </div>
+            </div>
+          ))
+        )}
       </div>
     </div>
   );
@@ -1173,6 +1254,32 @@ function SettingsTab({ user }: any) {
     } catch (err) {
       console.error(err);
       alert('Erreur de migration : ' + (err as Error).message);
+    } finally {
+      setMigrating(false);
+    }
+  };
+
+  const migrateOrdersFromCommandesToOrders = async () => {
+    setMigrating(true);
+    try {
+      console.log('Début de la migration de "commandes" vers "orders"...');
+      const snap = await getDocs(collection(db, 'commandes'));
+      
+      if (snap.empty) {
+        alert("Aucune commande trouvée dans l'ancienne collection 'commandes'.");
+        return;
+      }
+      
+      let count = 0;
+      for (const d of snap.docs) {
+        const data = d.data();
+        await setDoc(doc(db, 'orders', d.id), data);
+        count++;
+      }
+      alert(`${count} commandes migrées avec succès !`);
+    } catch (err: any) {
+      console.error(err);
+      alert('Erreur: ' + err.message);
     } finally {
       setMigrating(false);
     }
@@ -1308,7 +1415,15 @@ function SettingsTab({ user }: any) {
             >
               {migrating ? 'Migration en cours...' : '1. Migrer de "produits" vers "products"'}
             </button>
-            <p className="text-[10px] text-gray-400 text-center px-4">Utilisez ce bouton si vos produits ne s'affichent plus suite au changement de langue.</p>
+            
+            <button 
+              onClick={migrateOrdersFromCommandesToOrders}
+              disabled={migrating}
+              className="w-full py-4 bg-slate-900 text-white font-bold rounded-2xl hover:bg-slate-800 transition-all disabled:opacity-50 text-sm shadow-lg shadow-brand-blue/20"
+            >
+              {migrating ? 'Migration en cours...' : '2. Migrer de "commandes" vers "orders"'}
+            </button>
+            <p className="text-[10px] text-gray-400 text-center px-4">Utilisez ces boutons si vos données ne s'affichent plus suite au changement de langue.</p>
             
             <div className="pt-4 border-t border-border-subtle">
               <button 
@@ -1316,7 +1431,7 @@ function SettingsTab({ user }: any) {
                 disabled={seeding}
                 className="w-full py-4 border-2 border-dashed border-red-100 text-red-500 font-bold rounded-2xl hover:bg-red-50 transition-all disabled:opacity-50 text-sm"
               >
-                {seeding ? 'Réinitialisation...' : '2. Réinitialiser / Importer Démo'}
+                {seeding ? 'Réinitialisation...' : '3. Réinitialiser / Importer Démo'}
               </button>
             </div>
           </div>
